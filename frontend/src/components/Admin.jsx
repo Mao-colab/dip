@@ -2,7 +2,7 @@ import { IconStaff, IconTruck, IconSettings, IconCheck, IconBlock, IconTrash, Ic
 import { useState, useEffect, useCallback } from 'react';
 import { useStore, KEYS } from '../hooks/useStore';
 import { useCurrency, CURRENCIES } from '../hooks/useCurrency';
-import { verificationApi, auditApi } from '../services/api';
+import { api, verificationApi, auditApi } from '../services/api';
 
 const C = { blue:'#2563eb', green:'#16a34a', red:'#dc2626', amber:'#d97706', purple:'#7c3aed', gray:'#6b7280', border:'#e5e7eb', bg:'#f8fafc' };
 
@@ -249,31 +249,49 @@ const DEFAULT_PERMS = {
 };
 
 function RolesSection() {
-  const [perms, setPerms] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('mt_roles_config') || 'null') || DEFAULT_PERMS;
-    } catch { return DEFAULT_PERMS; }
-  });
+  // Роли и права хранятся в БД (таблица role_permissions), а не в localStorage —
+  // конфигурация общая для всех администраторов и переживает смену браузера/устройства.
+  const [perms, setPerms] = useState(DEFAULT_PERMS);
   const [saved, setSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    api.get('/roles/permissions')
+      .then((data) => {
+        if (!alive) return;
+        if (data && Object.keys(data).length) setPerms(data);
+        setLoading(false);
+      })
+      .catch(() => { if (alive) { setLoadError(true); setLoading(false); } });
+    return () => { alive = false; };
+  }, []);
 
   function toggle(role, perm) {
     if (role === 'admin' && perm === 'admin') return; // Нельзя снять у admin
+    const next = !perms[role]?.[perm];
     setPerms(p => ({
       ...p,
-      [role]: { ...p[role], [perm]: !p[role][perm] },
+      [role]: { ...p[role], [perm]: next },
     }));
+    api.put('/roles/permissions', { role, permission: perm, enabled: next }).catch(() => {
+      // откат при ошибке сохранения на сервере
+      setPerms(p => ({ ...p, [role]: { ...p[role], [perm]: !next } }));
+      setLoadError(true);
+    });
   }
 
   function save() {
-    localStorage.setItem('mt_roles_config', JSON.stringify(perms));
     window.dispatchEvent(new Event('mt:roleschange'));
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
   }
 
   function reset() {
-    setPerms(DEFAULT_PERMS);
-    localStorage.removeItem('mt_roles_config');
+    api.post('/roles/permissions/reset').then((data) => {
+      if (data) setPerms(data);
+    }).catch(() => setLoadError(true));
     setSaved(false);
   }
 
@@ -282,7 +300,12 @@ function RolesSection() {
   return (
     <div style={{ padding:'20px 24px', overflowY:'auto' }}>
       <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
-        <h1 style={{ margin:0, fontSize:18, fontWeight:800 }}>Роли и права доступа</h1>
+        <div>
+          <h1 style={{ margin:0, fontSize:18, fontWeight:800 }}>Роли и права доступа</h1>
+          <span style={{ fontSize:12, color: loadError ? C.red : C.gray }}>
+            {loading ? 'Загрузка из БД…' : loadError ? 'Ошибка синхронизации с сервером — изменения могут не сохраниться' : 'Хранится в БД (таблица role_permissions), изменения применяются мгновенно для всех'}
+          </span>
+        </div>
         <div style={{ display:'flex', gap:8 }}>
           <button onClick={reset} style={{ padding:'8px 14px', borderRadius:8, border:`1px solid ${C.border}`, background:'#f9fafb', fontSize:13, cursor:'pointer' }}>Сбросить</button>
           <button onClick={save} style={{ padding:'8px 18px', borderRadius:8, border:'none', background: saved?C.green:C.blue, color:'#fff', fontSize:13, fontWeight:700, cursor:'pointer' }}>

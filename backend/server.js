@@ -24,6 +24,7 @@ const verificationRoutes  = require('./routes/verificationRoutes');
 const reviewsRoutes       = require('./routes/reviewsRoutes');
 const incidentsRoutes     = require('./routes/incidentsRoutes');
 const webhooksRoutes      = require('./routes/webhooksRoutes');
+const roleRoutes          = require('./routes/roleRoutes');
 
 const rateLimit = require('./middleware/rateLimit');
 
@@ -58,6 +59,7 @@ app.use('/api/v1/audit',        auditRoutes);
 app.use('/api/v1/pdf',          pdfRoutes);
 app.use('/api/v1/export',       exportRoutes);
 app.use('/api/v1/verification', verificationRoutes);
+app.use('/api/v1/roles',        roleRoutes);
 app.use('/api/v1/reviews',      reviewsRoutes);
 app.use('/api/v1/incidents',    incidentsRoutes);
 app.use('/api/v1/webhooks',     webhooksRoutes);
