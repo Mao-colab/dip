@@ -13,7 +13,7 @@
  * Останов: Ctrl+C (SIGINT) — корректно остановит все таймеры
  */
 
-const API = process.env.API_URL || 'http://localhost:5000/api/v1';
+const API = process.env.API_URL || 'http://localhost:4000/api/v1';
 
 // Маршруты совпадают с ROUTES в TrackingMap.jsx. loadId должен существовать
 // в таблице loads и быть назначен соответствующему водителю (driver_id).

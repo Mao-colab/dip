@@ -656,6 +656,26 @@ INSERT INTO webhooks (owner_id, url, events, secret, active, created_at) VALUES
 (1, 'https://monitor.mt-broker.by/events',           '["load.created","load.status_changed","user.verified","claim.opened","incident.created"]', 'whsec_admin2024monitor', 1, DATE_SUB(NOW(),INTERVAL 90 DAY));
 
 -- ════════════════════════════════════════════════════════════
+-- КООРДИНАТЫ ОТПРАВЛЕНИЯ для заказов без координат
+-- (необходимо для модуля автоназначения водителя — формула гаверсинуса)
+-- ════════════════════════════════════════════════════════════
+UPDATE loads SET origin_lat=53.9045, origin_lng=27.5615 WHERE origin_city='Минск'   AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=52.0975, origin_lng=23.7341 WHERE origin_city='Брест'    AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=53.6778, origin_lng=23.8298 WHERE origin_city='Гродно'   AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=53.9006, origin_lng=30.3314 WHERE origin_city='Могилёв'  AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=52.4345, origin_lng=30.9754 WHERE origin_city='Гомель'   AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=55.1904, origin_lng=30.2049 WHERE origin_city='Витебск'  AND origin_lat IS NULL;
+
+-- ════════════════════════════════════════════════════════════
+-- КЛИЕНТСКИЙ АККАУНТ (для демонстрации клиентского портала)
+-- email: client@mt.by / пароль: demo1234
+-- ════════════════════════════════════════════════════════════
+INSERT INTO Users (name,email,phone,password_hash,role,verified,balance,avatar_color,location,availability,specialization)
+VALUES ('ООО «ЕвроТрейд»','client@mt.by','+375171000099',@pwd,'client',1,0.00,'#0d9488','Минск','available','Клиент-грузовладелец');
+-- привязываем несколько заказов к этому отправителю (портал фильтрует по shipper_name)
+UPDATE loads SET shipper_name='ООО «ЕвроТрейд»' WHERE id IN (26,30,35);
+
+-- ════════════════════════════════════════════════════════════
 -- ИТОГОВЫЙ ОТЧЁТ
 -- ════════════════════════════════════════════════════════════
 SELECT CONCAT('✅ Пользователей: ',      COUNT(*)) AS result FROM Users
