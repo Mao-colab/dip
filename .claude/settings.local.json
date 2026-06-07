@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"require\\('./server'\\)\")",
+      "PowerShell(cd \"d:\\\\diplom\\\\YT\\\\backend\"; node -e \"require\\('./db/connection'\\).execute\\('SELECT 1'\\).then\\(\\(\\)=>console.log\\('DB OK'\\)\\).catch\\(e=>console.log\\('DB ERROR:',e.message\\)\\)\" 2>&1; echo \"exit: $LASTEXITCODE\")",
+      "PowerShell(cd \"d:\\\\diplom\\\\YT\\\\backend\"; $job = Start-Job { cd \"d:\\\\diplom\\\\YT\\\\backend\"; node server.js }; Start-Sleep -Seconds 4; try { $r = Invoke-WebRequest -Uri \"http://localhost:4000/health\" -UseBasicParsing -TimeoutSec 3; Write-Host \"Backend OK:\" $r.Content } catch { Write-Host \"Backend FAIL:\" $_.Exception.Message }; Stop-Job $job; Remove-Job $job)",
+      "Read(//f/��祭��/����� �����/YT/frontend/**)",
+      "Read(//f/��祭��/����� �����/YT/backend/**)",
+      "PowerShell(Get-ChildItem -Path \"F:\\\\Быченко\\\\Новая папка\\\\YT\\\\frontend\\\\src\" -Recurse | Where-Object { !$_.PSIsContainer } | Select-Object FullName -First 60)",
+      "PowerShell(Get-Service | Where-Object { $_.Name -match \"sql|mysql|maria\" } | Select-Object Name, Status, DisplayName)",
+      "PowerShell(\\(Get-Command mysql -ErrorAction SilentlyContinue\\).Source; \\(Get-Command mysqld -ErrorAction SilentlyContinue\\).Source)",
+      "PowerShell(Get-Process -Name \"node\" -ErrorAction SilentlyContinue | ForEach-Object { $id = $_.Id; $cmd = \\(Get-WmiObject Win32_Process -Filter \"ProcessId=$id\"\\).CommandLine; [PSCustomObject]@{Id=$id; CPU=$_.CPU; MB=[math]::Round\\($_.WorkingSet/1MB,1\\); Cmd=$cmd} })"
+    ]
+  }
+}

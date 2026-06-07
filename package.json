@@ -1,0 +1,13 @@
+{
+  "name": "mtrans",
+  "version": "2.0.0",
+  "description": "MT — платформа брокерских грузоперевозок",
+  "scripts": {
+    "postinstall": "npm install --prefix backend",
+    "build": "npm install --prefix frontend && npm run build --prefix frontend",
+    "start": "node backend/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
