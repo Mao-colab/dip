@@ -38,8 +38,8 @@ async function listIncidents(req, res) {
               u2.name AS resolver_name,
               l.origin_city, l.destination_city
        FROM incidents i
-       JOIN  Users u  ON u.id  = i.reporter_id
-       LEFT JOIN Users u2 ON u2.id = i.resolved_by
+       JOIN  users u  ON u.id  = i.reporter_id
+       LEFT JOIN users u2 ON u2.id = i.resolved_by
        LEFT JOIN loads l  ON l.id  = i.load_id
        ${where}
        ORDER BY i.created_at DESC
@@ -68,8 +68,8 @@ async function getIncident(req, res) {
               u2.name AS resolver_name,
               l.origin_city, l.destination_city, l.dispatcher_id
        FROM incidents i
-       JOIN  Users u  ON u.id  = i.reporter_id
-       LEFT JOIN Users u2 ON u2.id = i.resolved_by
+       JOIN  users u  ON u.id  = i.reporter_id
+       LEFT JOIN users u2 ON u2.id = i.resolved_by
        LEFT JOIN loads l  ON l.id  = i.load_id
        WHERE i.id = ?`,
       [req.params.id]
@@ -113,7 +113,7 @@ async function createIncident(req, res) {
 
         // Также уведомляем всех диспетчеров и администраторов
         const [dispatchers] = await db.execute(
-          "SELECT id FROM Users WHERE role IN ('admin','dispatcher') LIMIT 10"
+          "SELECT id FROM users WHERE role IN ('admin','dispatcher') LIMIT 10"
         );
         dispatchers.forEach(d => toNotify.add(d.id));
 
@@ -133,7 +133,7 @@ async function createIncident(req, res) {
 
     const [[created]] = await db.execute(
       `SELECT i.*, u.name AS reporter_name FROM incidents i
-       JOIN Users u ON u.id = i.reporter_id WHERE i.id = ?`,
+       JOIN users u ON u.id = i.reporter_id WHERE i.id = ?`,
       [incidentId]
     );
 
@@ -162,7 +162,7 @@ async function updateIncident(req, res) {
 
     const [[updated]] = await db.execute(
       `SELECT i.*, u.name AS reporter_name FROM incidents i
-       JOIN Users u ON u.id = i.reporter_id WHERE i.id = ?`,
+       JOIN users u ON u.id = i.reporter_id WHERE i.id = ?`,
       [req.params.id]
     );
     res.json(updated);

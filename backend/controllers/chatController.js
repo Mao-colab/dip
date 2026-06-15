@@ -26,14 +26,14 @@ exports.getContacts = async (req, res) => {
          last_msg.created_at  AS last_time,
          last_msg.sender_id,
          COUNT(unread.id)     AS unread_count
-       FROM Users u
+       FROM users u
        JOIN (
          -- ✅ Подзапрос: берём только последнее сообщение на пару (userId, u.id)
          SELECT m.*
-         FROM Messages m
+         FROM messages m
          WHERE m.id = (
            SELECT MAX(m2.id)
-           FROM Messages m2
+           FROM messages m2
            WHERE (m2.sender_id = ? AND m2.receiver_id = m.receiver_id)
               OR (m2.receiver_id = ? AND m2.sender_id = m.sender_id)
          )
@@ -41,7 +41,7 @@ exports.getContacts = async (req, res) => {
          (last_msg.sender_id   = ? AND last_msg.receiver_id = u.id) OR
          (last_msg.receiver_id = ? AND last_msg.sender_id   = u.id)
        )
-       LEFT JOIN Messages unread ON (
+       LEFT JOIN messages unread ON (
          unread.receiver_id = ? AND
          unread.sender_id   = u.id AND
          unread.is_read     = 0
@@ -71,8 +71,8 @@ exports.getDirectHistory = async (req, res) => {
     const [messages] = await db.execute(
       `SELECT m.id, m.text, m.type, m.created_at, m.sender_id, m.receiver_id,
               m.order_id, m.is_read, u.name AS sender_name, u.role AS sender_role
-       FROM Messages m
-       JOIN Users u ON m.sender_id = u.id
+       FROM messages m
+       JOIN users u ON m.sender_id = u.id
        WHERE (m.sender_id = ? AND m.receiver_id = ?)
           OR (m.sender_id = ? AND m.receiver_id = ?)
        ORDER BY m.created_at ASC`,
@@ -80,7 +80,7 @@ exports.getDirectHistory = async (req, res) => {
     );
 
     await db.execute(
-      `UPDATE Messages SET is_read = 1
+      `UPDATE messages SET is_read = 1
        WHERE sender_id = ? AND receiver_id = ? AND is_read = 0`,
       [otherId, myId]
     );
@@ -115,8 +115,8 @@ exports.getChatHistory = async (req, res) => {
          m.is_read,
          u.name AS sender_name,
          u.role AS sender_role
-       FROM Messages m
-       JOIN Users u ON m.sender_id = u.id
+       FROM messages m
+       JOIN users u ON m.sender_id = u.id
        WHERE m.order_id = ?
        ORDER BY m.created_at ASC`,
       [orderId]
@@ -124,7 +124,7 @@ exports.getChatHistory = async (req, res) => {
 
     // Помечаем входящие сообщения прочитанными
     await db.execute(
-      `UPDATE Messages
+      `UPDATE messages
        SET is_read = 1
        WHERE order_id = ? AND receiver_id = ? AND is_read = 0`,
       [orderId, userId]
@@ -153,7 +153,7 @@ exports.sendMessage = async (req, res) => {
 
   try {
     const [result] = await db.execute(
-      `INSERT INTO Messages (sender_id, receiver_id, order_id, text, type, is_read, created_at)
+      `INSERT INTO messages (sender_id, receiver_id, order_id, text, type, is_read, created_at)
        VALUES (?, ?, ?, ?, 'text', 0, NOW(3))`,
       [senderId, receiverId, safeOrderId, text.trim()]
     );

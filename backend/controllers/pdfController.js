@@ -49,8 +49,8 @@ async function generateTtn(req, res) {
               u2.name AS dispatcher_name,
               GROUP_CONCAT(CONCAT(lv.year,' ',lv.make,' ',IFNULL(lv.type,'')) SEPARATOR '; ') AS vehicles
        FROM loads l
-       LEFT JOIN Users u1 ON u1.id = l.driver_id
-       LEFT JOIN Users u2 ON u2.id = l.dispatcher_id
+       LEFT JOIN users u1 ON u1.id = l.driver_id
+       LEFT JOIN users u2 ON u2.id = l.dispatcher_id
        LEFT JOIN load_vehicles lv ON lv.load_id = l.id
        WHERE l.id = ?
        GROUP BY l.id`,
@@ -121,7 +121,7 @@ async function generateCmr(req, res) {
   try {
     const [[load]] = await db.execute(
       `SELECT l.*, u1.name AS driver_name, u1.phone AS driver_phone
-       FROM loads l LEFT JOIN Users u1 ON u1.id = l.driver_id
+       FROM loads l LEFT JOIN users u1 ON u1.id = l.driver_id
        WHERE l.id = ?`,
       [req.params.id]
     );
@@ -167,8 +167,8 @@ async function generateInvoice(req, res) {
     const [[load]] = await db.execute(
       `SELECT l.*, u1.name AS driver_name, u2.name AS dispatcher_name
        FROM loads l
-       LEFT JOIN Users u1 ON u1.id = l.driver_id
-       LEFT JOIN Users u2 ON u2.id = l.dispatcher_id
+       LEFT JOIN users u1 ON u1.id = l.driver_id
+       LEFT JOIN users u2 ON u2.id = l.dispatcher_id
        WHERE l.id = ?`,
       [req.params.id]
     );

@@ -7,7 +7,7 @@
  *  - FR-05: Мониторинг статуса водителя
  *  - §5 Надёжность: пинги каждые 30–60 сек
  *  - §12 Риски: Dead Reckoning при потере GPS-сигнала
- *  - §7.1 ERD: таблица GPS_Logs (driverId, loadId, lat, lng, timestamp)
+ *  - §7.1 ERD: таблица gps_logs (driverId, loadId, lat, lng, timestamp)
  */
 
 const db = require('../db/connection');
@@ -50,16 +50,16 @@ exports.receiveGpsPing = async (req, res) => {
     : null;
 
   try {
-    // 1. Записываем пинг в GPS_Logs
+    // 1. Записываем пинг в gps_logs
     const [result] = await db.execute(
-      `INSERT INTO GPS_Logs (driver_id, load_id, lat, lng, speed, heading, accuracy, created_at)
+      `INSERT INTO gps_logs (driver_id, load_id, lat, lng, speed, heading, accuracy, created_at)
        VALUES (?, ?, ?, ?, ?, ?, ?, NOW(3))`,
       [driverId, safeLoadId, lat, lng, speed, heading, accuracy]
     );
 
-    // 2. Обновляем текущую позицию водителя в таблице Users
+    // 2. Обновляем текущую позицию водителя в таблице users
     await db.execute(
-      `UPDATE Users
+      `UPDATE users
        SET last_lat = ?, last_lng = ?, last_ping_at = NOW(3), status = 'active'
        WHERE id = ?`,
       [lat, lng, driverId]
@@ -111,7 +111,7 @@ exports.getDriverLocation = async (req, res) => {
     // 1. Текущая позиция водителя
     const [[driver]] = await db.execute(
       `SELECT id, name, last_lat, last_lng, last_ping_at, status, load_id
-       FROM Users WHERE id = ? AND role = 'driver'`,
+       FROM users WHERE id = ? AND role = 'driver'`,
       [driverId]
     );
 
@@ -122,7 +122,7 @@ exports.getDriverLocation = async (req, res) => {
     // 2. Последние N путевых точек
     const [waypoints] = await db.execute(
       `SELECT lat, lng, speed, heading, created_at
-       FROM GPS_Logs
+       FROM gps_logs
        WHERE driver_id = ?
        ORDER BY created_at DESC
        LIMIT ${WAYPOINTS_LIMIT}`,
@@ -174,10 +174,10 @@ exports.getOrderRoute = async (req, res) => {
   try {
     // 1. Данные заказа
     const [[load]] = await db.execute(
-      `SELECT id, origin_lat, origin_lng, origin_address,
-              dest_lat, dest_lng, dest_address,
+      `SELECT id, origin_lat, origin_lng, origin_addr AS origin_address,
+              dest_lat, dest_lng, destination_addr AS dest_address,
               driver_id, planned_pickup_at, planned_delivery_at, status
-       FROM Loads WHERE id = ?`,
+       FROM loads WHERE id = ?`,
       [orderId]
     );
 
@@ -188,7 +188,7 @@ exports.getOrderRoute = async (req, res) => {
     // 2. Фактический трек по заказу
     const [actualTrack] = await db.execute(
       `SELECT lat, lng, speed, created_at
-       FROM GPS_Logs
+       FROM gps_logs
        WHERE load_id = ?
        ORDER BY created_at ASC`,
       [orderId]
@@ -369,7 +369,7 @@ async function _geoNotify(dispatcherId, loadId, newStatus) {
 async function checkAndMarkDelayed(driverId, loadId) {
   const [[load]] = await db.execute(
     `SELECT planned_pickup_at, planned_delivery_at, status
-     FROM Loads WHERE id = ? AND driver_id = ?`,
+     FROM loads WHERE id = ? AND driver_id = ?`,
     [loadId, driverId]
   );
 
@@ -392,7 +392,7 @@ async function checkAndMarkDelayed(driverId, loadId) {
 
   if (delayMin >= DELAYED_THRESHOLD_MIN) {
     await db.execute(
-      `UPDATE Loads SET status = 'delayed', delay_minutes = ? WHERE id = ?`,
+      `UPDATE loads SET status = 'delayed', delay_minutes = ? WHERE id = ?`,
       [Math.round(delayMin), loadId]
     );
     console.log(

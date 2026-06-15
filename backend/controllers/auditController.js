@@ -26,7 +26,7 @@ async function listAuditLogs(req, res) {
     const [rows] = await db.execute(
       `SELECT al.*, u.name AS user_name, u.role AS user_role
        FROM audit_logs al
-       LEFT JOIN Users u ON u.id = al.user_id
+       LEFT JOIN users u ON u.id = al.user_id
        ${where}
        ORDER BY al.created_at DESC
        LIMIT ${parseInt(limit)|0} OFFSET ${parseInt(offset)|0}`,
