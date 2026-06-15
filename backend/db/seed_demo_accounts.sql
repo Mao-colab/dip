@@ -1,10 +1,10 @@
-﻿-- ═══════════════════════════════════════════════════════════════════════════
+-- ═══════════════════════════════════════════════════════════════════════════
 -- MT Broker — Демо-аккаунты для презентации
 -- 5 аккаунтов: admin · dispatcher · broker · driver · driver3
 -- Богатая переписка, уведомления, история действий
 -- ═══════════════════════════════════════════════════════════════════════════
 
-USE mt_broker;
+-- USE mt_broker;  -- (раскомментируйте только при локальном запуске)
 SET NAMES utf8mb4;
 
 -- ════════════════════════════════════════════════════════════
@@ -14,7 +14,7 @@ SET NAMES utf8mb4;
 --     8=Ivan(driver) 9=Alexei(driver) 10=Nikolai(driver) 11=Roman(driver)
 -- ════════════════════════════════════════════════════════════
 
-INSERT INTO Messages (sender_id, receiver_id, order_id, text, type, is_read, created_at) VALUES
+INSERT INTO messages (sender_id, receiver_id, order_id, text, type, is_read, created_at) VALUES
 
 -- ── 1. БРОКЕР СЕРГЕЙ (4) ↔ ДИСПЕТЧЕР АННА (2) — деловое общение ──────────────
 (4, 2, NULL, 'Анна, добрый день! Есть срочная потребность — Минск→Гданьск, 21т тент, отправка 10 июня. Можете выставить заказ и сразу поискать водителя?', 'text', 1, DATE_SUB(DATE_SUB(NOW(), INTERVAL 1 DAY), INTERVAL 9 HOUR)),
@@ -188,9 +188,9 @@ SELECT
   u.name,
   u.email,
   u.role,
-  (SELECT COUNT(*) FROM Messages WHERE sender_id=u.id OR receiver_id=u.id) AS сообщений,
+  (SELECT COUNT(*) FROM messages WHERE sender_id=u.id OR receiver_id=u.id) AS сообщений,
   (SELECT COUNT(*) FROM notifications WHERE user_id=u.id) AS уведомлений,
   (SELECT COUNT(*) FROM notifications WHERE user_id=u.id AND is_read=0) AS непрочитано
-FROM Users u
+FROM users u
 WHERE u.email IN ('admin@mt.by','dispatcher@mt.by','broker@mt.by','driver@mt.by','driver3@mt.by')
 ORDER BY FIELD(u.role,'admin','dispatcher','broker','driver');

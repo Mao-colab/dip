@@ -25,10 +25,10 @@ async function listClaims(req, res) {
               l.origin_city, l.destination_city,
               u3.name AS resolver_name
        FROM claims c
-       LEFT JOIN Users u1 ON u1.id = c.claimant_id
-       LEFT JOIN Users u2 ON u2.id = c.respondent_id
+       LEFT JOIN users u1 ON u1.id = c.claimant_id
+       LEFT JOIN users u2 ON u2.id = c.respondent_id
        LEFT JOIN loads l  ON l.id  = c.load_id
-       LEFT JOIN Users u3 ON u3.id = c.resolved_by
+       LEFT JOIN users u3 ON u3.id = c.resolved_by
        ${where}
        ORDER BY c.created_at DESC
        LIMIT ${parseInt(limit)|0} OFFSET ${parseInt(offset)|0}`,
@@ -57,10 +57,10 @@ async function getClaim(req, res) {
               l.origin_city, l.destination_city, l.origin_addr, l.destination_addr,
               u3.name AS resolver_name
        FROM claims c
-       LEFT JOIN Users u1 ON u1.id = c.claimant_id
-       LEFT JOIN Users u2 ON u2.id = c.respondent_id
+       LEFT JOIN users u1 ON u1.id = c.claimant_id
+       LEFT JOIN users u2 ON u2.id = c.respondent_id
        LEFT JOIN loads l  ON l.id  = c.load_id
-       LEFT JOIN Users u3 ON u3.id = c.resolved_by
+       LEFT JOIN users u3 ON u3.id = c.resolved_by
        WHERE c.id = ?`,
       [req.params.id]
     );

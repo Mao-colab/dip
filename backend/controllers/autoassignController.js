@@ -125,7 +125,7 @@ async function offerToDriver(req, res) {
       : `Вам предложен заказ #${loadId}. Ожидаем подтверждения.`;
 
     await db.execute(
-      `INSERT INTO Messages (sender_id, receiver_id, order_id, text, type, is_read, created_at)
+      `INSERT INTO messages (sender_id, receiver_id, order_id, text, type, is_read, created_at)
        VALUES (?, ?, ?, ?, 'system', 0, NOW(3))`,
       [senderId, driverId, loadId, text]
     );

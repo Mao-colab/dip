@@ -134,7 +134,7 @@ async function getHistory(req, res) {
     const [rows] = await db.execute(
       `SELECT q.*, u.name AS broker_name
        FROM rate_quotes q
-       LEFT JOIN Users u ON u.id = q.broker_id
+       LEFT JOIN users u ON u.id = q.broker_id
        ${where}
        ORDER BY q.created_at DESC
        LIMIT ${parseInt(limit)|0} OFFSET ${parseInt(offset)|0}`,

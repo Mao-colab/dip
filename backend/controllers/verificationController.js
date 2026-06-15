@@ -23,7 +23,7 @@ async function listDocs(req, res) {
     const [docs] = await db.execute(
       `SELECT cd.*, u.name AS verifier_name
        FROM carrier_documents cd
-       LEFT JOIN Users u ON u.id = cd.verified_by
+       LEFT JOIN users u ON u.id = cd.verified_by
        WHERE cd.user_id = ?
        ORDER BY cd.doc_type, cd.created_at DESC`,
       [userId]

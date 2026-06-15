@@ -1,5 +1,5 @@
 /**
- * MT — Users Controller
+ * MT — users Controller
  * FR-15: Управление пользователями и ролями (RBAC)
  * FR-17: Профиль перевозчика
  * FR-18: Профиль водителя
@@ -28,7 +28,7 @@ exports.getUsers = async (req, res) => {
          u.avatar_color, u.created_at,
          ROUND(AVG(r.rating), 2) AS avg_rating,
          COUNT(r.id)             AS review_count
-       FROM Users u
+       FROM users u
        LEFT JOIN reviews r ON r.target_user_id = u.id
        ${where}
        GROUP BY u.id
@@ -39,7 +39,7 @@ exports.getUsers = async (req, res) => {
 
     return res.status(200).json(rows);
   } catch (err) {
-    console.error('[Users] getUsers:', err);
+    console.error('[users] getUsers:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -54,7 +54,7 @@ exports.getUserById = async (req, res) => {
               u.avatar_color, u.created_at,
               ROUND(AVG(r.rating), 2) AS avg_rating,
               COUNT(r.id)             AS review_count
-       FROM Users u
+       FROM users u
        LEFT JOIN reviews r ON r.target_user_id = u.id
        WHERE u.id = ?
        GROUP BY u.id`,
@@ -70,7 +70,7 @@ exports.getUserById = async (req, res) => {
 
     return res.status(200).json({ ...user, vehicles });
   } catch (err) {
-    console.error('[Users] getUserById:', err);
+    console.error('[users] getUserById:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -99,15 +99,15 @@ exports.updateUser = async (req, res) => {
     if (!sets.length) return res.status(400).json({ error: 'Нет полей для обновления' });
 
     vals.push(targetId);
-    await db.execute(`UPDATE Users SET ${sets.join(', ')} WHERE id = ?`, vals);
+    await db.execute(`UPDATE users SET ${sets.join(', ')} WHERE id = ?`, vals);
 
     const [[updated]] = await db.execute(
-      'SELECT id, name, email, phone, role, verified, specialization, location, availability, dispatch_fee, status, avatar_color FROM Users WHERE id = ?',
+      'SELECT id, name, email, phone, role, verified, specialization, location, availability, dispatch_fee, status, avatar_color FROM users WHERE id = ?',
       [targetId]
     );
     return res.json(updated);
   } catch (err) {
-    console.error('[Users] updateUser:', err);
+    console.error('[users] updateUser:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -117,10 +117,10 @@ exports.deleteUser = async (req, res) => {
   try {
     if (req.user.role !== 'admin') return res.status(403).json({ error: 'Нет прав' });
 
-    await db.execute('DELETE FROM Users WHERE id = ?', [req.params.id]);
+    await db.execute('DELETE FROM users WHERE id = ?', [req.params.id]);
     return res.json({ success: true });
   } catch (err) {
-    console.error('[Users] deleteUser:', err);
+    console.error('[users] deleteUser:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -133,7 +133,7 @@ exports.getVehicles = async (req, res) => {
     const [vehicles] = await db.execute('SELECT * FROM user_vehicles WHERE driver_id = ?', [driverId]);
     return res.json(vehicles);
   } catch (err) {
-    console.error('[Users] getVehicles:', err);
+    console.error('[users] getVehicles:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -156,7 +156,7 @@ exports.addVehicle = async (req, res) => {
     const [[vehicle]] = await db.execute('SELECT * FROM user_vehicles WHERE id = ?', [result.insertId]);
     return res.status(201).json(vehicle);
   } catch (err) {
-    console.error('[Users] addVehicle:', err);
+    console.error('[users] addVehicle:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -177,7 +177,7 @@ exports.updateVehicle = async (req, res) => {
     const [[vehicle]] = await db.execute('SELECT * FROM user_vehicles WHERE id = ?', [req.params.vehicleId]);
     return res.json(vehicle || { error: 'Не найдено' });
   } catch (err) {
-    console.error('[Users] updateVehicle:', err);
+    console.error('[users] updateVehicle:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -187,7 +187,7 @@ exports.deleteVehicle = async (req, res) => {
     await db.execute('DELETE FROM user_vehicles WHERE id = ? AND driver_id = ?', [req.params.vehicleId, req.user.id]);
     return res.json({ success: true });
   } catch (err) {
-    console.error('[Users] deleteVehicle:', err);
+    console.error('[users] deleteVehicle:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };
@@ -205,7 +205,7 @@ exports.deletePersonalData = async (req, res) => {
     const anon = `deleted_${targetId}_${Date.now()}`;
 
     await db.execute(
-      `UPDATE Users SET
+      `UPDATE users SET
          name         = ?,
          email        = ?,
          phone        = NULL,
@@ -220,7 +220,7 @@ exports.deletePersonalData = async (req, res) => {
 
     // Удаляем личные сообщения (кроме системных по заявкам)
     await db.execute(
-      `DELETE FROM Messages WHERE (sender_id = ? OR receiver_id = ?) AND order_id IS NULL`,
+      `DELETE FROM messages WHERE (sender_id = ? OR receiver_id = ?) AND order_id IS NULL`,
       [targetId, targetId]
     );
 
@@ -232,7 +232,7 @@ exports.deletePersonalData = async (req, res) => {
 
     return res.json({ success: true, message: 'Персональные данные удалены в соответствии с требованиями GDPR' });
   } catch (err) {
-    console.error('[Users] deletePersonalData:', err);
+    console.error('[users] deletePersonalData:', err);
     return res.status(500).json({ error: 'Ошибка сервера' });
   }
 };

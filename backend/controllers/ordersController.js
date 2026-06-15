@@ -71,7 +71,7 @@ async function getLoads(req, res) {
 
     res.json({ loads, total, page: Number(page), limit: Number(limit) });
   } catch (err) {
-    console.error('[Loads] getLoads:', err.message);
+    console.error('[loads] getLoads:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 }
@@ -92,7 +92,7 @@ async function getAgingLoads(req, res) {
     );
     res.json({ loads, count: loads.length });
   } catch (err) {
-    console.error('[Loads] getAgingLoads:', err.message);
+    console.error('[loads] getAgingLoads:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 }
@@ -122,7 +122,7 @@ async function getLoadById(req, res) {
 
     res.json({ ...load, vehicles });
   } catch (err) {
-    console.error('[Loads] getLoadById:', err.message);
+    console.error('[loads] getLoadById:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 }
@@ -170,7 +170,7 @@ async function createLoad(req, res) {
 
     res.status(201).json({ id: loadId, message: 'Заказ создан' });
   } catch (err) {
-    console.error('[Loads] createLoad:', err.message);
+    console.error('[loads] createLoad:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 }
@@ -215,7 +215,7 @@ async function updateLoad(req, res) {
 
     res.json({ message: 'Заказ обновлён' });
   } catch (err) {
-    console.error('[Loads] updateLoad:', err.message);
+    console.error('[loads] updateLoad:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 }
@@ -257,7 +257,7 @@ async function confirmDelivery(req, res) {
 
     res.json({ success: true, message: 'Доставка подтверждена' });
   } catch (err) {
-    console.error('[Loads] confirmDelivery:', err.message);
+    console.error('[loads] confirmDelivery:', err.message);
     res.status(500).json({ error: 'Ошибка сервера' });
   }
 }
@@ -301,7 +301,7 @@ async function _onStatusChange(loadId, prev, newStatus, actor) {
       dispatchEvent('load.paid', { loadId: Number(loadId) });
     }
   } catch (err) {
-    console.warn('[Loads] _onStatusChange:', err.message);
+    console.warn('[loads] _onStatusChange:', err.message);
   }
 }
 

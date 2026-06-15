@@ -18,7 +18,7 @@ async function getUserReviews(req, res) {
     const [reviews] = await db.execute(
       `SELECT r.*, u.name AS author_name, u.role AS author_role
        FROM reviews r
-       JOIN Users u ON u.id = r.author_id
+       JOIN users u ON u.id = r.author_id
        WHERE r.target_user_id = ?
        ORDER BY r.created_at DESC
        LIMIT ${parseInt(limit)|0} OFFSET ${parseInt(offset)|0}`,
@@ -97,7 +97,7 @@ async function createReview(req, res) {
     } catch {}
 
     const [[created]] = await db.execute(
-      'SELECT r.*, u.name AS author_name FROM reviews r JOIN Users u ON u.id = r.author_id WHERE r.author_id = ? AND r.target_user_id = ?',
+      'SELECT r.*, u.name AS author_name FROM reviews r JOIN users u ON u.id = r.author_id WHERE r.author_id = ? AND r.target_user_id = ?',
       [authorId, target_user_id]
     );
 
@@ -138,7 +138,7 @@ async function checkAndApplyBlacklist(userId) {
 
     if (stats.total >= MIN_REVIEWS_FOR_BLOCK && stats.avg < BLOCK_RATING_THRESHOLD) {
       await db.execute(
-        `UPDATE Users SET verified = -1 WHERE id = ? AND verified != -1`,
+        `UPDATE users SET verified = -1 WHERE id = ? AND verified != -1`,
         [userId]
       );
       await db.execute(

@@ -28,8 +28,8 @@ async function exportLoads(req, res) {
               u2.name AS dispatcher_name,
               l.created_at
        FROM loads l
-       LEFT JOIN Users u1 ON u1.id = l.driver_id
-       LEFT JOIN Users u2 ON u2.id = l.dispatcher_id
+       LEFT JOIN users u1 ON u1.id = l.driver_id
+       LEFT JOIN users u2 ON u2.id = l.dispatcher_id
        ${where}
        ORDER BY l.created_at DESC`,
       params
@@ -74,7 +74,7 @@ async function exportAnalytics(req, res) {
               SUM(l.cod_amount) AS total_cod, SUM(l.driver_pay) AS total_pay,
               ROUND(AVG(r.rating),2) AS avg_rating
        FROM loads l
-       JOIN Users u ON u.id = l.driver_id
+       JOIN users u ON u.id = l.driver_id
        LEFT JOIN reviews r ON r.target_user_id = l.driver_id
        GROUP BY l.driver_id ORDER BY loads_count DESC`
     );
@@ -107,8 +107,8 @@ async function exportClaims(req, res) {
               l.origin_city, l.destination_city,
               c.created_at, c.resolved_at
        FROM claims c
-       LEFT JOIN Users u1 ON u1.id = c.claimant_id
-       LEFT JOIN Users u2 ON u2.id = c.respondent_id
+       LEFT JOIN users u1 ON u1.id = c.claimant_id
+       LEFT JOIN users u2 ON u2.id = c.respondent_id
        LEFT JOIN loads l  ON l.id  = c.load_id
        ORDER BY c.created_at DESC`
     );
