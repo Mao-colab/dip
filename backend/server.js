@@ -6,6 +6,14 @@ require('dotenv').config();
 
 const { initTrackingSocket } = require('./sockets/trackingSocket');
 const { initChatSocket }     = require('./sockets/chatSocket');
+const { bootstrapDatabase }  = require('./db/bootstrap');
+
+// JWT_SECRET обязателен для подписи токенов. Если не задан — используем дефолт
+// (чтобы вход не падал с 500), но предупреждаем: в продакшене задайте свой.
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = 'mt-broker-default-secret-change-me';
+  console.warn('⚠️ JWT_SECRET не задан — используется небезопасный дефолт. Задайте переменную JWT_SECRET в продакшене!');
+}
 
 const trackingRoutes      = require('./routes/trackingRoutes');
 const chatRoutes          = require('./routes/chatRoutes');
@@ -86,4 +94,8 @@ const io = initTrackingSocket(server);
 initChatSocket(io);
 
 const PORT = process.env.PORT || 4000;
-server.listen(PORT, () => console.log(`MT Broker v2.0 запущен: http://localhost:${PORT}`));
+server.listen(PORT, async () => {
+  console.log(`MT Broker v2.0 запущен: http://localhost:${PORT}`);
+  // Авто-инициализация БД (схема + демо-данные, если пусто)
+  await bootstrapDatabase();
+});
