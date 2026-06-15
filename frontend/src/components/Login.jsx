@@ -29,9 +29,9 @@ const S = {
     padding: '11px 14px',
     borderRadius: 10,
     boxSizing: 'border-box',
-    background: 'rgba(255,255,255,0.06)',
-    border: '1px solid rgba(255,255,255,0.12)',
-    color: '#fff',
+    background: '#fff',
+    border: '1px solid #d1d5db',
+    color: '#111827',
     fontSize: 14,
     outline: 'none',
     transition: 'border-color .2s',
@@ -39,7 +39,7 @@ const S = {
   },
   label: {
     display: 'block',
-    color: 'rgba(255,255,255,.5)',
+    color: '#6b7280',
     fontSize: 11,
     fontWeight: 600,
     letterSpacing: '.07em',
@@ -61,20 +61,20 @@ const S = {
     transition: 'background .2s',
   },
   error: {
-    background: 'rgba(220,38,38,0.12)',
-    border: '1px solid rgba(220,38,38,0.3)',
+    background: '#fef2f2',
+    border: '1px solid #fecaca',
     borderRadius: 8,
     padding: '9px 14px',
     marginBottom: 16,
-    color: '#fca5a5',
+    color: '#b91c1c',
     fontSize: 13,
   },
   card: {
-    background: 'rgba(255,255,255,0.04)',
-    backdropFilter: 'blur(12px)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: '#fff',
+    border: '1px solid #e5e7eb',
     borderRadius: 20,
     padding: '32px 32px 28px',
+    boxShadow: '0 10px 40px rgba(15,28,46,0.08)',
   },
 };
 
@@ -96,8 +96,8 @@ function Input({ type = 'text', value, onChange, placeholder, autoComplete }) {
       placeholder={placeholder}
       autoComplete={autoComplete}
       style={S.input}
-      onFocus={e => (e.target.style.borderColor = 'rgba(37,99,235,.7)')}
-      onBlur={e => (e.target.style.borderColor = 'rgba(255,255,255,0.12)')}
+      onFocus={e => (e.target.style.borderColor = '#2563eb')}
+      onBlur={e => (e.target.style.borderColor = '#d1d5db')}
     />
   );
 }
@@ -145,7 +145,7 @@ function LoginForm({ onLogin, onSwitch, apiUrl }) {
 
   return (
     <div style={S.card}>
-      <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: '0 0 24px' }}>
+      <h2 style={{ color: '#111827', fontSize: 18, fontWeight: 700, margin: '0 0 24px' }}>
         Вход в систему
       </h2>
 
@@ -187,7 +187,7 @@ function LoginForm({ onLogin, onSwitch, apiUrl }) {
       </form>
 
       <div style={{ marginTop: 22, textAlign: 'center' }}>
-        <span style={{ color: 'rgba(255,255,255,.3)', fontSize: 13 }}>Нет аккаунта? </span>
+        <span style={{ color: '#9ca3af', fontSize: 13 }}>Нет аккаунта? </span>
         <button
           onClick={onSwitch}
           style={{
@@ -261,7 +261,7 @@ function RegisterForm({ onLogin, onSwitch, apiUrl }) {
 
   return (
     <div style={S.card}>
-      <h2 style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: '0 0 22px' }}>
+      <h2 style={{ color: '#111827', fontSize: 18, fontWeight: 700, margin: '0 0 22px' }}>
         Регистрация
       </h2>
 
@@ -291,9 +291,9 @@ function RegisterForm({ onLogin, onSwitch, apiUrl }) {
                     padding: '9px 12px',
                     borderRadius: 9,
                     border: '1.5px solid',
-                    borderColor: active ? r.color : 'rgba(255,255,255,0.1)',
-                    background: active ? r.color + '22' : 'rgba(255,255,255,0.03)',
-                    color: active ? '#fff' : 'rgba(255,255,255,.45)',
+                    borderColor: active ? r.color : '#e5e7eb',
+                    background: active ? r.color + '18' : '#f9fafb',
+                    color: active ? r.color : '#6b7280',
                     fontSize: 13,
                     fontWeight: 600,
                     cursor: 'pointer',
@@ -334,7 +334,7 @@ function RegisterForm({ onLogin, onSwitch, apiUrl }) {
       </form>
 
       <div style={{ marginTop: 22, textAlign: 'center' }}>
-        <span style={{ color: 'rgba(255,255,255,.3)', fontSize: 13 }}>Уже есть аккаунт? </span>
+        <span style={{ color: '#9ca3af', fontSize: 13 }}>Уже есть аккаунт? </span>
         <button
           onClick={onSwitch}
           style={{
@@ -382,7 +382,7 @@ export default function Login({ onLogin }) {
     <div
       style={{
         minHeight: '100vh',
-        background: '#0f1c2e',
+        background: '#f8fafc',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
@@ -398,7 +398,7 @@ export default function Login({ onLogin }) {
           inset: 0,
           pointerEvents: 'none',
           backgroundImage:
-            'radial-gradient(circle at 80% 20%, rgba(37,99,235,0.12) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(124,58,237,0.08) 0%, transparent 50%)',
+            'radial-gradient(circle at 80% 20%, rgba(37,99,235,0.06) 0%, transparent 50%), radial-gradient(circle at 20% 80%, rgba(124,58,237,0.05) 0%, transparent 50%)',
         }}
       />
 
@@ -421,8 +421,8 @@ export default function Login({ onLogin }) {
               <path d="M2 14L10 3l8 11H13v4H7v-4H2z" fill="white" opacity=".95" />
             </svg>
           </div>
-          <h1 style={{ color: '#fff', fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: -0.5 }}>MT</h1>
-          <p style={{ color: 'rgba(255,255,255,.35)', fontSize: 13, marginTop: 5 }}>Платформа грузоперевозок</p>
+          <h1 style={{ color: '#111827', fontSize: 26, fontWeight: 800, margin: 0, letterSpacing: -0.5 }}>MT</h1>
+          <p style={{ color: '#6b7280', fontSize: 13, marginTop: 5 }}>Платформа грузоперевозок</p>
         </div>
 
         {mode === 'login' ? (
