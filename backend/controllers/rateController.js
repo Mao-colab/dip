@@ -79,9 +79,9 @@ async function calculateRate(req, res) {
       currency:  'BYN',
       breakdown,
       market: history[0]?.count > 0 ? {
-        avg_rate: +(history[0].avg_rate).toFixed(2),
-        min_rate: +(history[0].min_rate).toFixed(2),
-        max_rate: +(history[0].max_rate).toFixed(2),
+        avg_rate: +Number(history[0].avg_rate).toFixed(2),
+        min_rate: +Number(history[0].min_rate).toFixed(2),
+        max_rate: +Number(history[0].max_rate).toFixed(2),
         samples:  history[0].count,
       } : null,
     });

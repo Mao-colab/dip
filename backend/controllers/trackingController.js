@@ -263,12 +263,14 @@ function deadReckoning(last, prev, elapsedMs) {
  */
 function haversineKm(p1, p2) {
   const R     = 6371; // км
-  const toRad = (x) => (x * Math.PI) / 180;
-  const dLat  = toRad(p2.lat - p1.lat);
-  const dLng  = toRad(p2.lng - p1.lng);
+  const toRad = (x) => (Number(x) * Math.PI) / 180;
+  const lat1 = Number(p1.lat), lng1 = Number(p1.lng);
+  const lat2 = Number(p2.lat), lng2 = Number(p2.lng);
+  const dLat  = toRad(lat2 - lat1);
+  const dLng  = toRad(lng2 - lng1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(p1.lat)) * Math.cos(toRad(p2.lat)) *
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
     Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
@@ -308,6 +310,7 @@ function estimateETA(recentPoints, load) {
   });
 
   const hoursLeft = remainingKm / avgSpeedKmh;
+  if (!Number.isFinite(hoursLeft)) return null; // защита от NaN (координаты пришли строкой/пусто)
   const eta = new Date(Date.now() + hoursLeft * 3_600_000);
   return eta.toISOString();
 }

@@ -76,6 +76,36 @@ function interpolateRoute(route, progress) {
   ];
 }
 
+// Радиус геозоны для визуализации (совпадает с IFNULL(geofence_radius_m, 500) на бэкенде)
+const GEOFENCE_RADIUS_M = 500;
+const STALE_SIGNAL_MS = 90_000; // совпадает с STALE_SIGNAL_MS в trackingController.js
+
+/**
+ * Мёртвое счисление (dead reckoning): прогноз текущей координаты по последней
+ * известной позиции, скорости и азимуту движения — решение прямой геодезической
+ * задачи на сфере. Применяется, когда сигнал от водителя устарел (> 90 сек).
+ */
+function deadReckon(lastLat, lastLng, speedKmh, headingDeg, secondsSinceUpdate) {
+  if (!speedKmh || !secondsSinceUpdate || secondsSinceUpdate < 5) return [lastLat, lastLng];
+  const R = 6371; // км
+  const distanceKm = (speedKmh * secondsSinceUpdate) / 3600;
+  const toRad = (d) => (d * Math.PI) / 180;
+  const toDeg = (r) => (r * 180) / Math.PI;
+  const brng = toRad(headingDeg || 0);
+  const lat1 = toRad(lastLat);
+  const lng1 = toRad(lastLng);
+  const angDist = distanceKm / R;
+
+  const lat2 = Math.asin(
+    Math.sin(lat1) * Math.cos(angDist) + Math.cos(lat1) * Math.sin(angDist) * Math.cos(brng)
+  );
+  const lng2 = lng1 + Math.atan2(
+    Math.sin(brng) * Math.sin(angDist) * Math.cos(lat1),
+    Math.cos(angDist) - Math.sin(lat1) * Math.sin(lat2)
+  );
+  return [toDeg(lat2), toDeg(lng2)];
+}
+
 function timeSince(d) {
   if (!d) return '';
   const s = Math.floor((Date.now() - new Date(d)) / 1000);
@@ -187,24 +217,66 @@ export default function TrackingMap() {
     }
   }
 
+  // Кеш геозон по loadId, чтобы не пересоздавать круги на каждое обновление
+  const geofences = useRef({});
+
+  /** Рисует круги геозон вокруг точек погрузки/выгрузки заказа (FR-21) */
+  function drawGeofences(map, d) {
+    if (!map || !window.ymaps || !d.loadId || !ROUTES[d.loadId]) return;
+    const key = String(d.loadId);
+    if (geofences.current[key]) return; // уже нарисованы для этого заказа
+    const route = ROUTES[d.loadId];
+
+    const mk = (center, color, label) => new window.ymaps.Circle(
+      [center, GEOFENCE_RADIUS_M],
+      { hintContent: `Геозона (${GEOFENCE_RADIUS_M} м): ${label}` },
+      { fillColor: `${color}26`, strokeColor: color, strokeWidth: 2, strokeOpacity: 0.85 }
+    );
+
+    const originCircle = mk(route.from, '#2563EB', `Погрузка — ${route.label}`);
+    const destCircle = mk(route.to, '#16A34A', `Выгрузка — ${route.label}`);
+    map.geoObjects.add(originCircle);
+    map.geoObjects.add(destCircle);
+    geofences.current[key] = [originCircle, destCircle];
+  }
+
+  /** Удаляет геозоны заказов, которых больше нет среди отображаемых водителей */
+  function pruneGeofences(map, activeLoadIds) {
+    Object.keys(geofences.current).forEach((key) => {
+      if (!activeLoadIds.has(key)) {
+        geofences.current[key].forEach((c) => { try { map.geoObjects.remove(c); } catch {} });
+        delete geofences.current[key];
+      }
+    });
+  }
+
   function placeMarker(map, d) {
     if (!map || !window.ymaps || d.lat == null || d.lng == null) return;
     const cfg = STATUS_CFG[d.status] || STATUS_CFG.active;
     const route = d.loadId ? ROUTES[d.loadId] : null;
+
+    // Мёртвое счисление: если последний пинг старше 90 сек — экстраполируем позицию
+    const secondsSince = d.lastUpdate ? (Date.now() - new Date(d.lastUpdate).getTime()) / 1000 : 0;
+    const stale = secondsSince > STALE_SIGNAL_MS / 1000;
+    const [lat, lng] = stale
+      ? deadReckon(d.lat, d.lng, d.speed, d.heading, secondsSince)
+      : [d.lat, d.lng];
+
     const body = `<div style=”padding:8px 12px;min-width:160px;font-family:sans-serif”>
       <b style=”font-size:13px;color:#111827”>${d.name}</b><br/>
       ${d.loadId ? `<span style=”color:#d97706”>Заказ #${d.loadId}</span><br/>` : ''}
       ${route ? `<span style=”font-size:12px”>${route.label}</span><br/>` : ''}
       <span style=”font-size:12px;color:#6b7280”>${cfg.label}</span>
       ${d.speed > 0 ? `<br/><span style=”font-size:12px”>${Math.round(d.speed)} км/ч</span>` : ''}
+      ${stale ? `<br/><span style=”font-size:11px;color:#b45309”>⚠ позиция вычислена (мёртвое счисление)</span>` : ''}
     </div>`;
     const id = String(d.id);
     if (markers.current[id]) {
-      markers.current[id].geometry.setCoordinates([d.lat, d.lng]);
+      markers.current[id].geometry.setCoordinates([lat, lng]);
       markers.current[id].properties.set('balloonContentBody', body);
     } else {
       const pm = new window.ymaps.Placemark(
-        [d.lat, d.lng],
+        [lat, lng],
         { balloonContentHeader: d.name, balloonContentBody: body, hintContent: d.name },
         { preset: 'islands#circleDotIcon', iconColor: cfg.dot }
       );
@@ -224,9 +296,13 @@ export default function TrackingMap() {
       }
     });
 
+    const activeLoadIds = new Set(driversArr.filter((d) => d.loadId).map((d) => String(d.loadId)));
+    pruneGeofences(mapObj.current, activeLoadIds);
+
     driversArr.forEach((d) => {
       if (d.lat == null || d.lng == null) return;
       drawRouteLine(mapObj.current, d);
+      drawGeofences(mapObj.current, d);
       placeMarker(mapObj.current, d);
     });
   }, [driversArr, ready]);

@@ -454,7 +454,10 @@ INSERT INTO carrier_documents (user_id, doc_type, doc_number, issued_by, issued_
 (6, 'vehicle_cert','ТР-Ю001234', 'ГАИ МВД РБ',               '2021-03-10', '2029-03-10', 'verified', 1, DATE_SUB(NOW(),INTERVAL 30 DAY), 'Парк 5 единиц техники'),
 -- ИП Захаров (id=7)
 (7, 'insurance',   'СМР-7892345','БРУСП «Белгосстрах»',      '2025-09-15', '2026-09-15', 'verified', 1, DATE_SUB(NOW(),INTERVAL 32 DAY), 'CMR страховка'),
-(7, 'vehicle_cert','ТР-Ю002345', 'ГАИ МВД РБ',               '2019-11-20', '2026-11-20', 'pending',  NULL, NULL,                          'Техпаспорт истекает через 5 мес.');
+(7, 'vehicle_cert','ТР-Ю002345', 'ГАИ МВД РБ',               '2019-11-20', '2026-11-20', 'pending',  NULL, NULL,                          'Техпаспорт истекает через 5 мес.'),
+-- Просроченные документы (для демонстрации статуса "Просрочен" в Documents.jsx)
+(9, 'medical',     'МС-00111222','МСЧ №3 г. Гомеля',         '2024-01-15', '2025-01-15', 'expired',  NULL, NULL,                          'Срок действия истёк — требуется переосвидетельствование'),
+(10,'insurance',   'КАСКО-770099','БРУСП «Белгосстрах»',     '2024-03-01', '2025-03-01', 'expired',  NULL, NULL,                          'Полис не продлён — требуется новая страховка перед рейсом');
 
 -- ════════════════════════════════════════════════════════════
 -- ОТЗЫВЫ
@@ -651,6 +654,26 @@ INSERT INTO webhooks (owner_id, url, events, secret, active, created_at) VALUES
 (4, 'https://erp.mikhailov-logistics.by/webhook/mt', '["load.created","load.status_changed","load.delivered"]', 'whsec_mikh2024abcdef', 1, DATE_SUB(NOW(),INTERVAL 60 DAY)),
 (5, 'https://api.petrova-cargo.by/callbacks/mt',     '["load.created","claim.opened"]',                         'whsec_petr2024uvwxyz', 1, DATE_SUB(NOW(),INTERVAL 45 DAY)),
 (1, 'https://monitor.mt-broker.by/events',           '["load.created","load.status_changed","user.verified","claim.opened","incident.created"]', 'whsec_admin2024monitor', 1, DATE_SUB(NOW(),INTERVAL 90 DAY));
+
+-- ════════════════════════════════════════════════════════════
+-- КООРДИНАТЫ ОТПРАВЛЕНИЯ для заказов без координат
+-- (необходимо для модуля автоназначения водителя — формула гаверсинуса)
+-- ════════════════════════════════════════════════════════════
+UPDATE loads SET origin_lat=53.9045, origin_lng=27.5615 WHERE origin_city='Минск'   AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=52.0975, origin_lng=23.7341 WHERE origin_city='Брест'    AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=53.6778, origin_lng=23.8298 WHERE origin_city='Гродно'   AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=53.9006, origin_lng=30.3314 WHERE origin_city='Могилёв'  AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=52.4345, origin_lng=30.9754 WHERE origin_city='Гомель'   AND origin_lat IS NULL;
+UPDATE loads SET origin_lat=55.1904, origin_lng=30.2049 WHERE origin_city='Витебск'  AND origin_lat IS NULL;
+
+-- ════════════════════════════════════════════════════════════
+-- КЛИЕНТСКИЙ АККАУНТ (для демонстрации клиентского портала)
+-- email: client@mt.by / пароль: demo1234
+-- ════════════════════════════════════════════════════════════
+INSERT INTO Users (name,email,phone,password_hash,role,verified,balance,avatar_color,location,availability,specialization)
+VALUES ('ООО «ЕвроТрейд»','client@mt.by','+375171000099',@pwd,'client',1,0.00,'#0d9488','Минск','available','Клиент-грузовладелец');
+-- привязываем несколько заказов к этому отправителю (портал фильтрует по shipper_name)
+UPDATE loads SET shipper_name='ООО «ЕвроТрейд»' WHERE id IN (26,30,35);
 
 -- ════════════════════════════════════════════════════════════
 -- ИТОГОВЫЙ ОТЧЁТ
