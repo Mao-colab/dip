@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS GPS_Logs (
     lat        DECIMAL(10, 7)   NOT NULL,       -- широта  (точность ~1 см)
     lng        DECIMAL(10, 7)   NOT NULL,       -- долгота
 
-    -- ✅ ИСПРАВЛЕНО: комментарий км/ч (было миль/ч) — согласовано с GpsService.js
+    -- ИСПРАВЛЕНО: комментарий км/ч (было миль/ч) — согласовано с GpsService.js
     speed      DECIMAL(6, 2)    NOT NULL DEFAULT 0,   -- км/ч
     heading    SMALLINT         NOT NULL DEFAULT 0,   -- курс 0–359°
     accuracy   DECIMAL(6, 2)    NULL,                 -- точность GPS в метрах

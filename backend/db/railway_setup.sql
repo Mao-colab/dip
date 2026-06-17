@@ -1036,21 +1036,21 @@ INSERT INTO webhooks (owner_id, url, events, secret, active, created_at) VALUES
 -- ════════════════════════════════════════════════════════════
 -- ИТОГОВЫЙ ОТЧЁТ
 -- ════════════════════════════════════════════════════════════
-SELECT CONCAT('✅ Пользователей: ',      COUNT(*)) AS result FROM users
-UNION ALL SELECT CONCAT('✅ Заказов: ',         COUNT(*)) FROM loads
-UNION ALL SELECT CONCAT('✅ ТС заказов: ',      COUNT(*)) FROM load_vehicles
-UNION ALL SELECT CONCAT('✅ ТС водителей: ',    COUNT(*)) FROM user_vehicles
-UNION ALL SELECT CONCAT('✅ GPS-пингов: ',      COUNT(*)) FROM gps_logs
-UNION ALL SELECT CONCAT('✅ Сообщений: ',       COUNT(*)) FROM messages
-UNION ALL SELECT CONCAT('✅ Отзывов: ',         COUNT(*)) FROM reviews
-UNION ALL SELECT CONCAT('✅ Контактов: ',       COUNT(*)) FROM contacts
-UNION ALL SELECT CONCAT('✅ Претензий: ',       COUNT(*)) FROM claims
-UNION ALL SELECT CONCAT('✅ Инцидентов: ',      COUNT(*)) FROM incidents
-UNION ALL SELECT CONCAT('✅ Документов: ',      COUNT(*)) FROM carrier_documents
-UNION ALL SELECT CONCAT('✅ Расчётов ставок: ', COUNT(*)) FROM rate_quotes
-UNION ALL SELECT CONCAT('✅ Уведомлений: ',     COUNT(*)) FROM notifications
-UNION ALL SELECT CONCAT('✅ Записей аудита: ',  COUNT(*)) FROM audit_logs
-UNION ALL SELECT CONCAT('✅ Вебхуков: ',        COUNT(*)) FROM webhooks;
+SELECT CONCAT('Пользователей: ',      COUNT(*)) AS result FROM users
+UNION ALL SELECT CONCAT('Заказов: ',         COUNT(*)) FROM loads
+UNION ALL SELECT CONCAT('ТС заказов: ',      COUNT(*)) FROM load_vehicles
+UNION ALL SELECT CONCAT('ТС водителей: ',    COUNT(*)) FROM user_vehicles
+UNION ALL SELECT CONCAT('GPS-пингов: ',      COUNT(*)) FROM gps_logs
+UNION ALL SELECT CONCAT('Сообщений: ',       COUNT(*)) FROM messages
+UNION ALL SELECT CONCAT('Отзывов: ',         COUNT(*)) FROM reviews
+UNION ALL SELECT CONCAT('Контактов: ',       COUNT(*)) FROM contacts
+UNION ALL SELECT CONCAT('Претензий: ',       COUNT(*)) FROM claims
+UNION ALL SELECT CONCAT('Инцидентов: ',      COUNT(*)) FROM incidents
+UNION ALL SELECT CONCAT('Документов: ',      COUNT(*)) FROM carrier_documents
+UNION ALL SELECT CONCAT('Расчётов ставок: ', COUNT(*)) FROM rate_quotes
+UNION ALL SELECT CONCAT('Уведомлений: ',     COUNT(*)) FROM notifications
+UNION ALL SELECT CONCAT('Записей аудита: ',  COUNT(*)) FROM audit_logs
+UNION ALL SELECT CONCAT('Вебхуков: ',        COUNT(*)) FROM webhooks;
 
 -- ░░░░░░░░░░░░ 3/3 ПЕРЕПИСКА И УВЕДОМЛЕНИЯ (seed_demo_accounts.sql) ░░░░░░░░░░░░
 -- ═══════════════════════════════════════════════════════════════════════════

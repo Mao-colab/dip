@@ -40,9 +40,9 @@ export function useTracking() {
   const [drivers, setDrivers]           = useState(new Map());
   const [selectedRoute, setSelectedRoute] = useState(null);
   const [isConnected, setIsConnected]   = useState(false);
-  const [isLoading, setIsLoading]       = useState(true);   // ✅ НОВОЕ: индикатор загрузки
+  const [isLoading, setIsLoading]       = useState(true);   // НОВОЕ: индикатор загрузки
 
-  // ✅ ИСПРАВЛЕНО: разделены две независимые ошибки
+  // ИСПРАВЛЕНО: разделены две независимые ошибки
   const [wsError, setWsError]           = useState(null);   // ошибка WebSocket
   const [routeError, setRouteError]     = useState(null);   // ошибка загрузки маршрута
 
@@ -61,7 +61,7 @@ export function useTracking() {
 
       const data = await res.json();
 
-      // ✅ ИСПРАВЛЕНО: создаём новый Map с нуля (удалённые водители исчезают)
+      // ИСПРАВЛЕНО: создаём новый Map с нуля (удалённые водители исчезают)
       const next = new Map();
       data.forEach((d) => {
         next.set(String(d.id), {
@@ -87,7 +87,7 @@ export function useTracking() {
   }, []);
 
   // ── 2. Таймер определения потери сигнала ────────────────────────────────
-  // ✅ ИСПРАВЛЕНО: обёрнут в useCallback — нет баг с замыканием на старую версию
+  // ИСПРАВЛЕНО: обёрнут в useCallback — нет баг с замыканием на старую версию
   const resetStalenessTimer = useCallback((driverId) => {
     if (stalenessTimers.current.has(driverId)) {
       clearTimeout(stalenessTimers.current.get(driverId));
@@ -128,7 +128,7 @@ export function useTracking() {
       return next;
     });
 
-    // ✅ ИСПРАВЛЕНО: вызов стабильной useCallback-версии
+    // ИСПРАВЛЕНО: вызов стабильной useCallback-версии
     resetStalenessTimer(id);
   }, [resetStalenessTimer]);
 
@@ -151,7 +151,7 @@ export function useTracking() {
       return;
     }
 
-    // ✅ ИСПРАВЛЕНО: сбрасываем routeError отдельно от wsError
+    // ИСПРАВЛЕНО: сбрасываем routeError отдельно от wsError
     setRouteError(null);
     try {
       const token = localStorage.getItem('mt_token');

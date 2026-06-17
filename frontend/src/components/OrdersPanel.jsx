@@ -169,8 +169,8 @@ function AutoAssignModal({ loadId, onClose, onAssigned }) {
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:700, fontSize:14, color:'#111827' }}>{d.name}</div>
                 <div style={{ fontSize:12, color:'#6b7280', display:'flex', gap:12, marginTop:2 }}>
-                  {d.distance != null && <span>📍 {d.distance} км</span>}
-                  {d.rating > 0 && <span>⭐ {d.rating}</span>}
+                  {d.distance != null && <span>{d.distance} км</span>}
+                  {d.rating > 0 && <span>{d.rating}</span>}
                   <span style={{ color:d.status==='active'?C.green:'#9ca3af' }}>
                     ● {d.status==='active'?'Активен':'Свободен'}
                   </span>
@@ -192,7 +192,7 @@ function AutoAssignModal({ loadId, onClose, onAssigned }) {
       <div style={{ display:'flex', gap:10, borderTop:`1px solid ${C.border}`, paddingTop:14 }}>
         {suggestions.length > 0 && (
           <Btn variant="amber" onClick={autoAssign} disabled={assigning}>
-            ⚡ Авто-назначить лучшего
+            Авто-назначить лучшего
           </Btn>
         )}
         <Btn onClick={onClose}>Позже</Btn>
@@ -394,9 +394,9 @@ export default function OrdersPanel({ user }) {
         } else {
           const res = await loadsApi.create(payload);
           await loadOrders();
-          // Запускаем авто-назначение для диспетчеров и администраторов
+          // Запускаем авто-подбор водителя для брокеров, диспетчеров и администраторов
           const role = user?.role || user?.roleKey;
-          if (res?.id && ['dispatcher', 'admin'].includes(role)) {
+          if (res?.id && ['broker', 'dispatcher', 'admin'].includes(role)) {
             setAutoAssignLoadId(res.id);
           }
         }
@@ -685,14 +685,14 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <a href={`tel:${o.shipper_phone}`}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#f0fdf4', border:'1px solid #bbf7d0', color:'#16a34a', fontSize:12, fontWeight:600, textDecoration:'none' }}>
-                            📞 Позвонить грузоотправителю
+                            Позвонить грузоотправителю
                           </a>
                         )}
                         {o.driver_id && (
                           <button onClick={() => navigate('/messages')}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#eff6ff', border:'1px solid #bfdbfe', color:'#2563eb', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                            💬 Написать водителю
+                            Написать водителю
                           </button>
                         )}
                         {/* FR-25: Подтвердить доставку */}
@@ -700,7 +700,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <button onClick={() => confirmPod(o.id)}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#f0fdf4', border:'1px solid #86efac', color:'#16a34a', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                            ✅ Подтвердить доставку
+                            Подтвердить доставку
                           </button>
                         )}
                         {/* FR-28: Сообщить об инциденте */}
@@ -708,7 +708,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <button onClick={() => setIncidentLoadId(o.id)}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#fff1f2', border:'1px solid #fecaca', color:'#dc2626', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                            ⚠️ Инцидент
+                            ⚠ Инцидент
                           </button>
                         )}
                         {/* FR-09: Оставить отзыв */}
@@ -716,7 +716,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <button onClick={() => setReviewTarget({ loadId: o.id, userId: o.driver_id, userName: o.driver })}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#fffbeb', border:'1px solid #fde68a', color:'#d97706', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                            ⭐ Оценить водителя
+                            Оценить водителя
                           </button>
                         )}
                       </div>

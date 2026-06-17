@@ -15,9 +15,9 @@ const TYPE_ICONS = {
   claim_new:      '⚠',
   claim_resolved: '✓',
   doc_verified:   '✓',
-  order_assigned: '🚚',
-  order_status:   '📦',
-  info:           'ℹ',
+  order_assigned: '',
+  order_status:   '',
+  info:           '',
 };
 
 export default function NotificationsPanel() {
@@ -158,7 +158,7 @@ export default function NotificationsPanel() {
               )
               : items.map(n => {
                 const color = TYPE_COLORS[n.type] || '#6b7280';
-                const icon  = TYPE_ICONS[n.type]  || 'ℹ';
+                const icon  = TYPE_ICONS[n.type]  || '';
                 return (
                   <div key={n.id}
                     style={{
