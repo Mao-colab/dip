@@ -5,6 +5,7 @@ const path    = require('path');
 require('dotenv').config();
 
 const { initTrackingSocket } = require('./sockets/trackingSocket');
+const { startTrackingSimulator } = require('./sockets/trackingSimulator');
 const { initChatSocket }     = require('./sockets/chatSocket');
 const { bootstrapDatabase }  = require('./db/bootstrap');
 
@@ -92,6 +93,8 @@ app.use((err, req, res, _next) => {
 
 const io = initTrackingSocket(server);
 initChatSocket(io);
+// Демо-движение транспорта по маршрутам (отключается через TRACKING_SIM=off)
+startTrackingSimulator();
 
 const PORT = process.env.PORT || 4000;
 server.listen(PORT, async () => {

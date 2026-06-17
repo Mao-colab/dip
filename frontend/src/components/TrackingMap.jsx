@@ -191,12 +191,12 @@ export default function TrackingMap() {
     if (!map || !window.ymaps || d.lat == null || d.lng == null) return;
     const cfg = STATUS_CFG[d.status] || STATUS_CFG.active;
     const route = d.loadId ? ROUTES[d.loadId] : null;
-    const body = `<div style=”padding:8px 12px;min-width:160px;font-family:sans-serif”>
-      <b style=”font-size:13px;color:#111827”>${d.name}</b><br/>
-      ${d.loadId ? `<span style=”color:#d97706”>Заказ #${d.loadId}</span><br/>` : ''}
-      ${route ? `<span style=”font-size:12px”>${route.label}</span><br/>` : ''}
-      <span style=”font-size:12px;color:#6b7280”>${cfg.label}</span>
-      ${d.speed > 0 ? `<br/><span style=”font-size:12px”>${Math.round(d.speed)} км/ч</span>` : ''}
+    const body = `<div style="padding:8px 12px;min-width:160px;font-family:sans-serif">
+      <b style="font-size:13px;color:#111827">${d.name}</b><br/>
+      ${d.loadId ? `<span style="color:#d97706">Заказ #${d.loadId}</span><br/>` : ''}
+      ${route ? `<span style="font-size:12px">${route.label}</span><br/>` : ''}
+      <span style="font-size:12px;color:#6b7280">${cfg.label}</span>
+      ${d.speed > 0 ? `<br/><span style="font-size:12px">${Math.round(d.speed)} км/ч</span>` : ''}
     </div>`;
     const id = String(d.id);
     if (markers.current[id]) {

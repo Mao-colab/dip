@@ -107,7 +107,7 @@ export function useTracking() {
 
   // ── 3. Обновление позиции водителя при GPS-пинге ────────────────────────
   const handleLocationUpdate = useCallback((payload) => {
-    const { driverId, loadId, lat, lng, speed, heading, timestamp } = payload;
+    const { driverId, loadId, lat, lng, speed, heading, progress, timestamp } = payload;
     const id = String(driverId);
 
     setDrivers((prev) => {
@@ -120,6 +120,7 @@ export function useTracking() {
         lng,
         speed,
         heading,
+        progress,   // прогресс по маршруту (0..1) — для закраски пройденного участка
         loadId,
         lastUpdate: new Date(timestamp),
         signalLost: false,

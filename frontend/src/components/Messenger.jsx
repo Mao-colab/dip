@@ -4,11 +4,14 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'react-router-dom';
+import { io } from 'socket.io-client';
 import { IconMessages } from '../icons';
 
 const PRIMARY = '#d97706';
 const BORDER  = '1px solid #e5e7eb';
 const BASE    = process.env.REACT_APP_API_URL || 'http://localhost:4000/api/v1';
+// Сокет подключаем так же, как трекинг: пустой URL → текущий origin (в dev проксируется на :4000)
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || '';
 
 function getToken() { return localStorage.getItem('mt_token'); }
 function getMe()    { try { return JSON.parse(localStorage.getItem('mt_user') || 'null'); } catch { return null; } }
@@ -91,6 +94,42 @@ export default function Messenger() {
   }, [messages]);
 
   const activeContact = contacts.find(c => c.id === activeId);
+
+  // ── Реал-тайм приём входящих сообщений (WebSocket) ──────────────────────
+  // Держим актуальный activeId в ref, чтобы не пересоздавать сокет при смене чата.
+  const activeIdRef = useRef(activeId);
+  useEffect(() => { activeIdRef.current = activeId; }, [activeId]);
+
+  useEffect(() => {
+    const token = getToken();
+    if (!token) return;
+    const socket = io(SOCKET_URL || undefined, {
+      auth: { token },
+      transports: ['websocket'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+
+    socket.on('chat:message', (m) => {
+      const senderId = m.senderId ?? m.sender_id;
+      // Сообщение в открытом сейчас диалоге — сразу добавляем в ленту
+      if (String(senderId) === String(activeIdRef.current)) {
+        setMessages(prev =>
+          prev.some(x => x.id === m.id) ? prev : [...prev, {
+            id:          m.id,
+            text:        m.text,
+            sender_id:   senderId,
+            sender_name: m.senderName ?? m.sender_name,
+            created_at:  m.createdAt ?? m.created_at ?? new Date().toISOString(),
+          }]
+        );
+      }
+      // Обновляем список диалогов (превью последнего сообщения, счётчик, порядок)
+      loadContacts();
+    });
+
+    return () => socket.disconnect();
+  }, [loadContacts]);
 
   const sendMessage = useCallback(async () => {
     const text = input.trim();

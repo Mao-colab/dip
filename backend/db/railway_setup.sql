@@ -438,11 +438,11 @@ VALUES
 -- id=11 Водитель 4
 ('Роман Козлов',      'driver4@mt.by',      '+375291112236', @pwd, 'driver',     1,  2100.00, '#15803d', 'Гродно',  'available', 'Водитель кат. CE, стаж 5 лет');
 
--- Координаты и статусы водителей
-UPDATE users SET last_lat=52.2297, last_lng=21.0122, last_ping_at=NOW(), status='active',       load_id=NULL WHERE id=8;
-UPDATE users SET last_lat=56.9460, last_lng=24.1059, last_ping_at=NOW(), status='active',       load_id=NULL WHERE id=9;
-UPDATE users SET last_lat=52.0000, last_lng=22.8000, last_ping_at=NOW(), status='active',       load_id=NULL WHERE id=10;
-UPDATE users SET last_lat=54.6872, last_lng=25.2797, last_ping_at=NOW(), status='active',       load_id=NULL WHERE id=11;
+-- Координаты и статусы водителей (стартовые точки маршрутов — далее их двигает симулятор трекинга)
+UPDATE users SET last_lat=52.0975, last_lng=23.7341, last_ping_at=NOW(), status='active', load_id=19 WHERE id=8;  -- Брест → Берлин
+UPDATE users SET last_lat=55.1904, last_lng=30.2049, last_ping_at=NOW(), status='active', load_id=21 WHERE id=9;  -- Витебск → Рига
+UPDATE users SET last_lat=53.9045, last_lng=27.5615, last_ping_at=NOW(), status='active', load_id=18 WHERE id=10; -- Минск → Варшава
+UPDATE users SET last_lat=52.4345, last_lng=30.9754, last_ping_at=NOW(), status='active', load_id=20 WHERE id=11; -- Гомель → Вильнюс
 
 -- ════════════════════════════════════════════════════════════
 -- ЗАКАЗЫ (37 шт.)
