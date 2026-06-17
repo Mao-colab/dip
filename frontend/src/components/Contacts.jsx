@@ -62,6 +62,7 @@ export default function Contacts() {
   const [search, setSearch]     = useState('');
   const [filter, setFilter]     = useState('все');
   const [showAdd, setShowAdd]   = useState(false);
+  const [editId, setEditId]     = useState(null);
   const [form, setForm]         = useState(BLANK);
   const [showReview, setShowReview] = useState(false);
   const [reviewText, setReviewText] = useState('');
@@ -81,10 +82,21 @@ export default function Contacts() {
     return list;
   }, [contacts, filter, search]);
 
-  function addContact() {
+  function saveContact() {
     const initials = form.name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase()||'??';
-    addContactStore({ ...form, id:Date.now(), initials, color:getColor(form.name), blacklisted:false, orders:0, balance:0 });
-    setForm(BLANK); setShowAdd(false);
+    if (editId != null) {
+      // Редактирование существующего контакта
+      updContact(editId, { ...form, initials, color:getColor(form.name) });
+      setSelected(v => v && v.id === editId ? { ...v, ...form, initials, color:getColor(form.name) } : v);
+    } else {
+      addContactStore({ ...form, id:Date.now(), initials, color:getColor(form.name), blacklisted:false, orders:0, balance:0 });
+    }
+    setForm(BLANK); setShowAdd(false); setEditId(null);
+  }
+  function openEdit(c) {
+    setForm({ name:c.name||'', role:c.role||'Перевозчик', phone:c.phone||'', email:c.email||'', city:c.city||'', rating:c.rating||5, notes:c.notes||'' });
+    setEditId(c.id);
+    setShowAdd(true);
   }
   function toggleBlacklist(id) {
     const contact = contacts.find(c=>c.id===id);
@@ -114,7 +126,7 @@ export default function Contacts() {
               </button>
             ))}
           </div>
-          <button onClick={()=>setShowAdd(true)} style={{ padding:'8px 16px', borderRadius:8, background:'#2563eb', color:'#fff', border:'none', fontSize:13, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+          <button onClick={()=>{ setEditId(null); setForm(BLANK); setShowAdd(true); }} style={{ padding:'8px 16px', borderRadius:8, background:'#2563eb', color:'#fff', border:'none', fontSize:13, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
             + Добавить
           </button>
         </div>
@@ -243,9 +255,13 @@ export default function Contacts() {
                   ))}
                   {selected.notes && <div style={{ marginTop:12, padding:12, background:'#f8fafc', borderRadius:8, fontSize:12, color:'#6b7280', lineHeight:1.5 }}>{selected.notes}</div>}
                   <div style={{ display:'flex', gap:10, marginTop:16 }}>
+                    <button onClick={()=>openEdit(selected)} style={{ flex:1, padding:'8px 0', borderRadius:10, border:'1.5px solid #e5e7eb', background:'#f9fafb', color:'#374151', fontWeight:700, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
+                      <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M13 3l4 4-9 9H4v-4l9-9z" stroke="currentColor" strokeWidth="1.5" strokeLinejoin="round"/></svg>
+                      Изменить
+                    </button>
                     <button onClick={()=>setShowReview(true)} style={{ flex:1, padding:'8px 0', borderRadius:10, border:'1.5px solid #bfdbfe', background:'#eff6ff', color:'#2563eb', fontWeight:700, fontSize:12, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:5 }}>
                       <svg width="13" height="13" viewBox="0 0 20 20" fill="none"><path d="M10 2l2.4 5 5.6.8-4 3.9 1 5.6L10 14.5l-5 2.8 1-5.6-4-3.9 5.6-.8L10 2z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round"/></svg>
-                      Оставить отзыв
+                      Отзыв
                     </button>
                     <button onClick={()=>toggleBlacklist(selected.id)}
                       style={{ flex:1, padding:'8px 0', borderRadius:10, border:`1.5px solid ${selected.blacklisted?'#bbf7d0':'#fecaca'}`, background:selected.blacklisted?'#f0fdf4':'#fff1f2', color:selected.blacklisted?'#16a34a':'#dc2626', fontWeight:700, fontSize:12, cursor:'pointer' }}>
@@ -280,7 +296,7 @@ export default function Contacts() {
       </div>
 
       {showAdd && (
-        <Modal title="Новый контакт" onClose={()=>setShowAdd(false)}>
+        <Modal title={editId != null ? 'Редактировать контакт' : 'Новый контакт'} onClose={()=>{ setShowAdd(false); setEditId(null); }}>
           <Field label="Полное имя (ФИО)" value={form.name} onChange={ff('name')} placeholder="Иван Анатольевич Петров" />
           <Field label="Роль" value={form.role} onChange={ff('role')} options={ROLES} />
           <Field label="Телефон" value={form.phone} onChange={ff('phone')} placeholder="+375 29 000-00-00" />
@@ -294,8 +310,8 @@ export default function Contacts() {
           </div>
           <Field label="Заметки (УНП, договор, особенности)" value={form.notes} onChange={ff('notes')} placeholder="УНП 190123456. Доп. информация..." />
           <div style={{ display:'flex', gap:10, marginTop:4 }}>
-            <button onClick={addContact} style={{ flex:1, background:'#2563eb', color:'#fff', border:'none', borderRadius:10, padding:'10px 0', fontWeight:700, cursor:'pointer', fontSize:14 }}>Сохранить</button>
-            <button onClick={()=>setShowAdd(false)} style={{ padding:'10px 16px', borderRadius:10, border:'1px solid #e5e7eb', background:'#f9fafb', cursor:'pointer' }}>Отмена</button>
+            <button onClick={saveContact} style={{ flex:1, background:'#2563eb', color:'#fff', border:'none', borderRadius:10, padding:'10px 0', fontWeight:700, cursor:'pointer', fontSize:14 }}>Сохранить</button>
+            <button onClick={()=>{ setShowAdd(false); setEditId(null); }} style={{ padding:'10px 16px', borderRadius:10, border:'1px solid #e5e7eb', background:'#f9fafb', cursor:'pointer' }}>Отмена</button>
           </div>
         </Modal>
       )}

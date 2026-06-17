@@ -4,6 +4,44 @@
 
 const db = require('../db/connection');
 
+// Координаты основных городов (fallback, если у заказа не заданы origin_lat/lng).
+const CITY_COORDS = {
+  'минск': [53.9045, 27.5615], 'брест': [52.0975, 23.7341], 'гомель': [52.4345, 30.9754],
+  'витебск': [55.1904, 30.2049], 'гродно': [53.6884, 23.8258], 'могилёв': [53.9168, 30.3449],
+  'могилев': [53.9168, 30.3449], 'бобруйск': [53.1384, 29.2214], 'барановичи': [53.1327, 26.0139],
+  'пинск': [52.1229, 26.0951], 'борисов': [54.2278, 28.5050], 'орша': [54.5081, 30.4172],
+  'мозырь': [52.0495, 29.2456], 'солигорск': [52.7876, 27.5419], 'лида': [53.8884, 25.2961],
+  'варшава': [52.2297, 21.0122], 'берлин': [52.5200, 13.4050], 'вильнюс': [54.6872, 25.2797],
+  'рига': [56.9460, 24.1059], 'москва': [55.7558, 37.6173], 'киев': [50.4501, 30.5234],
+};
+const DEFAULT_ORIGIN = [53.9045, 27.5615]; // Минск — центр по умолчанию
+
+function resolveOrigin(load) {
+  if (load.origin_lat != null && load.origin_lng != null) {
+    return [Number(load.origin_lat), Number(load.origin_lng)];
+  }
+  const city = String(load.origin_city || '').trim().toLowerCase();
+  return CITY_COORDS[city] || DEFAULT_ORIGIN;
+}
+
+/**
+ * Выбирает диспетчера для авто-назначения: наименее загруженного активными заказами.
+ * Возвращает { id, name } или null, если диспетчеров нет.
+ */
+async function pickDispatcher() {
+  const [rows] = await db.execute(
+    `SELECT u.id, u.name,
+            (SELECT COUNT(*) FROM loads l
+              WHERE l.dispatcher_id = u.id
+                AND l.status IN ('Новый','Запрошен','Назначен','Забран')) AS active_loads
+     FROM users u
+     WHERE u.role = 'dispatcher'
+     ORDER BY active_loads ASC, u.id ASC
+     LIMIT 1`
+  );
+  return rows[0] || null;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/v1/autoassign/suggest/:loadId
 // ─────────────────────────────────────────────────────────────────────────────
@@ -29,15 +67,9 @@ async function getSuggestedDrivers(req, res) {
     if (!load) return res.status(404).json({ error: 'Заказ не найден' });
 
     const vehicleType = load.vehicle_type || load.lv_vehicle_type || null;
-    const originLat   = load.origin_lat;
-    const originLng   = load.origin_lng;
-
-    if (!originLat || !originLng) {
-      return res.json({
-        loadId, suggestions: [], totalFound: 0, searchRadius: radius,
-        criteria: { vehicleType, origin: { city: load.origin_city } },
-      });
-    }
+    // Если у заказа нет координат — берём по городу (или Минск по умолчанию),
+    // чтобы автоподбор всегда работал, даже для заказов без геокодинга.
+    const [originLat, originLng] = resolveOrigin(load);
 
     const [drivers] = await db.execute(
       `SELECT
@@ -68,14 +100,14 @@ async function getSuggestedDrivers(req, res) {
          AND u.last_lat IS NOT NULL AND u.last_lng IS NOT NULL
          AND u.id != ?
        GROUP BY u.id
-       HAVING distance_km <= ? AND (vehicle_match = 1 OR ? IS NULL)
-       ORDER BY u.status DESC, distance_km ASC, rating DESC
+       HAVING distance_km <= ?
+       ORDER BY vehicle_match DESC, u.status DESC, distance_km ASC, rating DESC
        LIMIT ${parseInt(limit) | 0}`,
       [
         originLat, originLat, originLng,
         vehicleType, vehicleType, vehicleType,
         load.driver_id || 0,
-        Number(radius), vehicleType,
+        Number(radius),
       ]
     );
 
@@ -159,19 +191,18 @@ async function autoAssignDriver(req, res) {
     const dispatcherId = req.user.id;
 
     const [[load]] = await db.execute(
-      'SELECT id, origin_lat, origin_lng, vehicle_type FROM loads WHERE id = ? AND status IN ("Новый","Запрошен") AND driver_id IS NULL',
+      'SELECT id, origin_lat, origin_lng, origin_city, vehicle_type FROM loads WHERE id = ? AND status IN ("Новый","Запрошен") AND driver_id IS NULL',
       [loadId]
     );
     if (!load) return res.status(400).json({ error: 'Заказ не найден или уже назначен' });
 
-    if (!load.origin_lat || !load.origin_lng) {
-      return res.status(400).json({ error: 'У заказа не указаны координаты погрузки' });
-    }
-
+    // Координаты погрузки: из заказа, по городу или Минск по умолчанию.
+    const [originLat, originLng] = resolveOrigin(load);
     const radius = criteria.radius || 1000;
 
     const [drivers] = await db.execute(
-      `SELECT u.id,
+      `SELECT u.id, u.name,
+              (u.load_id IS NULL) as is_free,
               ROUND(AVG(r.rating), 2) as rating,
               ROUND(
                 6371 * 2 * ASIN(SQRT(
@@ -185,12 +216,11 @@ async function autoAssignDriver(req, res) {
        WHERE u.role IN ('driver','carrier')
          AND u.status IN ('active','idle')
          AND u.last_lat IS NOT NULL AND u.last_lng IS NOT NULL
-         AND u.load_id IS NULL
        GROUP BY u.id
        HAVING distance_km <= ?
-       ORDER BY u.status DESC, distance_km ASC, rating DESC
+       ORDER BY is_free DESC, u.status DESC, distance_km ASC, rating DESC
        LIMIT 1`,
-      [load.origin_lat, load.origin_lat, load.origin_lng, radius]
+      [originLat, originLat, originLng, radius]
     );
 
     if (!drivers.length) {
@@ -199,9 +229,13 @@ async function autoAssignDriver(req, res) {
 
     const best = drivers[0];
 
+    // Авто-выбор диспетчера: наименее загруженный; если диспетчеров нет — текущий пользователь.
+    const dispatcher = await pickDispatcher();
+    const assignedDispatcherId = dispatcher?.id || dispatcherId;
+
     await db.execute(
       'UPDATE loads SET driver_id = ?, status = "Назначен", dispatcher_id = ? WHERE id = ?',
-      [best.id, dispatcherId, loadId]
+      [best.id, assignedDispatcherId, loadId]
     );
     await db.execute(
       'UPDATE users SET status = "active", load_id = ? WHERE id = ?',
@@ -216,8 +250,12 @@ async function autoAssignDriver(req, res) {
 
     res.json({
       success: true,
-      message: 'Водитель назначен автоматически',
-      assignment: { loadId, driver: { id: best.id, distance: best.distance_km, rating: best.rating } },
+      message: 'Водитель и диспетчер назначены автоматически',
+      assignment: {
+        loadId,
+        driver:     { id: best.id, name: best.name, distance: best.distance_km, rating: best.rating },
+        dispatcher: dispatcher ? { id: dispatcher.id, name: dispatcher.name } : null,
+      },
     });
 
   } catch (err) {

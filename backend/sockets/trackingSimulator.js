@@ -20,25 +20,26 @@ const { broadcastDriverLocation } = require('./trackingSocket');
 
 // ── Маршруты (точки идентичны ROUTES в frontend/src/components/TrackingMap.jsx) ──
 // start — начальный прогресс (0..1), чтобы машины стартовали в разных местах.
+// status — цвет маркера: active=зелёный, delayed=оранжевый, switched_off=красный.
 const TRIPS = [
   {
-    driverId: 8, loadId: 19, label: 'Брест → Берлин', start: 0.10, dir: 1,
+    driverId: 8, loadId: 19, label: 'Брест → Берлин', start: 0.10, dir: 1, status: 'active',
     speedKmh: [78, 92],
     points: [[52.0975, 23.7341], [52.1000, 21.8000], [52.4000, 19.0000], [52.5000, 14.5500], [52.5200, 13.4050]],
   },
   {
-    driverId: 10, loadId: 18, label: 'Минск → Варшава', start: 0.35, dir: 1,
+    driverId: 10, loadId: 18, label: 'Минск → Варшава', start: 0.35, dir: 1, status: 'active',
     speedKmh: [70, 85],
     points: [[53.9045, 27.5615], [53.1500, 26.0000], [52.6000, 24.5000], [52.0819, 23.6181], [52.2297, 21.0122]],
   },
   {
-    driverId: 11, loadId: 20, label: 'Гомель → Вильнюс', start: 0.55, dir: 1,
-    speedKmh: [72, 88],
+    driverId: 11, loadId: 20, label: 'Гомель → Вильнюс', start: 0.55, dir: 1, status: 'delayed',
+    speedKmh: [40, 60], // задержка — едет медленнее
     points: [[52.4345, 30.9754], [53.6000, 28.5000], [54.3500, 26.5000], [54.6872, 25.2797]],
   },
   {
-    driverId: 9, loadId: 21, label: 'Витебск → Рига', start: 0.78, dir: 1,
-    speedKmh: [75, 90],
+    driverId: 9, loadId: 21, label: 'Витебск → Рига', start: 0.78, dir: 1, status: 'switched_off',
+    speedKmh: [50, 70],
     points: [[55.1904, 30.2049], [55.5000, 27.0000], [56.0000, 25.5000], [56.9460, 24.1059]],
   },
 ];
@@ -117,6 +118,7 @@ function tick() {
       speed,
       heading: Math.round(head),
       progress: Number(trip.progress.toFixed(3)),
+      status: trip.status, // цвет маркера на карте
       timestamp: new Date().toISOString(),
     });
   }

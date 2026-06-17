@@ -10,6 +10,21 @@
 const db = require('../db/connection');
 const { dispatchEvent } = require('./webhooksController');
 
+// Геокодинг по названию города (для автоподбора водителей по расстоянию).
+const CITY_COORDS = {
+  'минск': [53.9045, 27.5615], 'брест': [52.0975, 23.7341], 'гомель': [52.4345, 30.9754],
+  'витебск': [55.1904, 30.2049], 'гродно': [53.6884, 23.8258], 'могилёв': [53.9168, 30.3449],
+  'могилев': [53.9168, 30.3449], 'бобруйск': [53.1384, 29.2214], 'барановичи': [53.1327, 26.0139],
+  'пинск': [52.1229, 26.0951], 'борисов': [54.2278, 28.5050], 'орша': [54.5081, 30.4172],
+  'мозырь': [52.0495, 29.2456], 'солигорск': [52.7876, 27.5419], 'лида': [53.8884, 25.2961],
+  'варшава': [52.2297, 21.0122], 'берлин': [52.5200, 13.4050], 'вильнюс': [54.6872, 25.2797],
+  'рига': [56.9460, 24.1059], 'москва': [55.7558, 37.6173], 'киев': [50.4501, 30.5234],
+};
+function geocodeCity(city) {
+  const key = String(city || '').trim().toLowerCase();
+  return CITY_COORDS[key] || [null, null];
+}
+
 const ALLOWED_STATUSES = [
   'Новый','Назначен','Забран','Доставлен',
   'В ожидании','Оплачен','Запрошен','Клейм','Архив','Удалён',
@@ -141,18 +156,24 @@ async function createLoad(req, res) {
       vehicles = [],
     } = req.body;
 
+    // Геокодинг городов → координаты (нужно для автоподбора водителей по расстоянию).
+    const [origin_lat, origin_lng] = geocodeCity(origin_city);
+    const [dest_lat, dest_lng]     = geocodeCity(destination_city);
+
     const [result] = await db.execute(
       `INSERT INTO loads
         (origin_addr, origin_city, origin_date, origin_contact, origin_phone,
          destination_addr, destination_city, destination_date, destination_contact, destination_phone,
          shipper_name, shipper_phone, cod_amount, driver_pay, vehicle_type, weight_kg, volume_m3,
+         origin_lat, origin_lng, dest_lat, dest_lng,
          status, dispatcher_id, created_at)
-       VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?,?,?, 'Новый', ?, NOW())`,
+       VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?,?,?, ?,?,?, ?,?,?,?, 'Новый', ?, NOW())`,
       [
         origin_addr, origin_city, origin_date, origin_contact, origin_phone,
         destination_addr, destination_city, destination_date, destination_contact, destination_phone,
         shipper_name, shipper_phone, cod_amount, driver_pay,
         vehicle_type || null, weight_kg || null, volume_m3 || null,
+        origin_lat, origin_lng, dest_lat, dest_lng,
         req.user.id,
       ]
     );

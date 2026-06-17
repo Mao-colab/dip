@@ -436,13 +436,23 @@ VALUES
 -- id=10 Водитель 3
 ('Николай Зайцев',    'driver3@mt.by',      '+375291112235', @pwd, 'driver',     1,  1950.00, '#b45309', 'Брест',   'available', 'Водитель кат. CE'),
 -- id=11 Водитель 4
-('Роман Козлов',      'driver4@mt.by',      '+375291112236', @pwd, 'driver',     1,  2100.00, '#15803d', 'Гродно',  'available', 'Водитель кат. CE, стаж 5 лет');
+('Роман Козлов',      'driver4@mt.by',      '+375291112236', @pwd, 'driver',     1,  2100.00, '#15803d', 'Гродно',  'available', 'Водитель кат. CE, стаж 5 лет'),
+-- id=12 Свободный водитель (для автоназначения)
+('Павел Гурский',     'driver5@mt.by',      '+375291112237', @pwd, 'driver',     1,  1700.00, '#0891b2', 'Минск',   'available', 'Водитель кат. CE, тентованный'),
+-- id=13 Свободный водитель
+('Андрей Шевчук',     'driver6@mt.by',      '+375291112238', @pwd, 'driver',     1,  1500.00, '#7c3aed', 'Гомель',  'available', 'Водитель кат. CE, рефрижератор'),
+-- id=14 Свободный водитель
+('Олег Касьян',       'driver7@mt.by',      '+375291112239', @pwd, 'driver',     1,  1300.00, '#be185d', 'Брест',   'available', 'Водитель кат. CE, ADR/МДП');
 
 -- Координаты и статусы водителей (стартовые точки маршрутов — далее их двигает симулятор трекинга)
 UPDATE users SET last_lat=52.0975, last_lng=23.7341, last_ping_at=NOW(), status='active', load_id=19 WHERE id=8;  -- Брест → Берлин
 UPDATE users SET last_lat=55.1904, last_lng=30.2049, last_ping_at=NOW(), status='active', load_id=21 WHERE id=9;  -- Витебск → Рига
 UPDATE users SET last_lat=53.9045, last_lng=27.5615, last_ping_at=NOW(), status='active', load_id=18 WHERE id=10; -- Минск → Варшава
 UPDATE users SET last_lat=52.4345, last_lng=30.9754, last_ping_at=NOW(), status='active', load_id=20 WHERE id=11; -- Гомель → Вильнюс
+-- Свободные водители (без заказа) — кандидаты для автоназначения
+UPDATE users SET last_lat=53.9045, last_lng=27.5615, last_ping_at=NOW(), status='idle', load_id=NULL WHERE id=12; -- Минск
+UPDATE users SET last_lat=52.4345, last_lng=30.9754, last_ping_at=NOW(), status='idle', load_id=NULL WHERE id=13; -- Гомель
+UPDATE users SET last_lat=52.0975, last_lng=23.7341, last_ping_at=NOW(), status='idle', load_id=NULL WHERE id=14; -- Брест
 
 -- ════════════════════════════════════════════════════════════
 -- ЗАКАЗЫ (37 шт.)
