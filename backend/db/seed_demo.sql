@@ -306,12 +306,12 @@ INSERT INTO loads (status,origin_city,origin_addr,origin_date,origin_contact,ori
   dispatcher_id,driver_id,created_at)
 VALUES
 -- 33 (повреждение груза)
-('Клейм','Минск','ул. Немига, 40','2026-05-14','Борис Кузьмин','+375291000120',
+('Спор','Минск','ул. Немига, 40','2026-05-14','Борис Кузьмин','+375291000120',
  'Рига','Aspazijas bulvāris, 5','2026-05-18','Artūrs Kalniņš','+37125000001',
  'ООО «МинскТех»','+375171000070',3600.00,2750.00,'Не оплачено','Бортовой',17000,65,
  2,8,DATE_SUB(NOW(),INTERVAL 21 DAY)),
 -- 34 (неоплата)
-('Клейм','Гомель','ул. Кирова, 7','2026-05-18','Вера Романова','+375232000040',
+('Спор','Гомель','ул. Кирова, 7','2026-05-18','Вера Романова','+375232000040',
  'Берлин','Unter den Linden, 15','2026-05-23','Dieter Klein','+4930500001',
  'ООО «ГомельТорг»','+375232000041',4700.00,3600.00,'Не оплачено','Тентованный 82м³',22000,82,
  3,9,DATE_SUB(NOW(),INTERVAL 17 DAY));
@@ -520,7 +520,7 @@ INSERT INTO messages (sender_id, receiver_id, order_id, text, type, is_read, cre
 (3, 9, 21, 'Отлично. Рига, Даугавы 30 — подъезд с торца склада. Контакт: Индулис +37123000001.', 'text', 1, DATE_SUB(DATE_SUB(NOW(), INTERVAL 3 DAY), INTERVAL 20 MINUTE)),
 (9, 3, 21, 'Прошёл таможню в Верхнедвинске. Всё чисто, документы в порядке.', 'text', 1, DATE_SUB(NOW(),INTERVAL 2 DAY)),
 (9, 3, 21, 'Въехал в Латвию. Приеду в Ригу ориентировочно завтра в 10:00.', 'text', 0, DATE_SUB(NOW(),INTERVAL 5 HOUR)),
--- Заказ 33 (Клейм): брокер→диспетчер
+-- Заказ 33 (Спор): брокер→диспетчер
 (4, 2, 33, 'Анна, нужно разобраться с заказом #33. Получатель в Риге говорит, что 3 паллеты повреждены.', 'text', 1, DATE_SUB(NOW(),INTERVAL 18 DAY)),
 (2, 4, 33, 'Сергей, понял. Водитель говорит, что груз принял в целости. Нужно фото с места.', 'text', 1, DATE_SUB(DATE_SUB(NOW(), INTERVAL 18 DAY), INTERVAL 30 MINUTE)),
 (4, 2, 33, 'Фото получены — видно вмятины на паллетах. Подаю претензию официально.', 'text', 1, DATE_SUB(NOW(),INTERVAL 17 DAY)),
@@ -642,7 +642,7 @@ INSERT INTO audit_logs (user_id, action, entity_type, entity_id, new_data, ip_ad
 (2, 'create', 'load', 26, '{"status":"Новый","origin_city":"Минск","destination_city":"Гданьск"}',             '192.168.1.10', NOW()),
 (3, 'create', 'load', 27, '{"status":"Новый","origin_city":"Брест","destination_city":"Берлин"}',              '192.168.1.11', NOW()),
 (1, 'verify', 'carrier_document', 1, '{"doc_type":"license","status":"verified","user_id":8}',                  '192.168.1.1',  DATE_SUB(NOW(),INTERVAL 30 DAY)),
-(2, 'update', 'load', 33, '{"status":"Клейм"}',                                                                  '192.168.1.10', DATE_SUB(NOW(),INTERVAL 20 DAY));
+(2, 'update', 'load', 33, '{"status":"Спор"}',                                                                  '192.168.1.10', DATE_SUB(NOW(),INTERVAL 20 DAY));
 
 -- ════════════════════════════════════════════════════════════
 -- ВЕБХУКИ
