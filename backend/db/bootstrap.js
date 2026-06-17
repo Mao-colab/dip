@@ -53,6 +53,9 @@ async function bootstrapDatabase() {
     await conn.query(readSql('init.sql'));
     console.log('✅ Схема БД проверена/создана');
 
+    // 1a. Миграции для уже существующих БД (CREATE TABLE IF NOT EXISTS их не трогает)
+    await runMigrations(conn);
+
     // 2. Демо-данные — только если база пустая
     if (String(process.env.DB_AUTO_SEED).toLowerCase() === 'false') {
       console.log('ℹ️  Наполнение демо-данными отключено (DB_AUTO_SEED=false)');
@@ -78,6 +81,41 @@ async function bootstrapDatabase() {
     // Не роняем сервер — он сможет работать, если база будет готова вручную
   } finally {
     await conn.end().catch(() => {});
+  }
+}
+
+/**
+ * Идемпотентные миграции для уже созданных БД.
+ * Выполняются на каждом старте, но реальные ALTER/UPDATE происходят
+ * только если изменение ещё не применено (проверка по INFORMATION_SCHEMA).
+ */
+async function runMigrations(conn) {
+  // Переименование статуса заказа «Клейм» → «Спор».
+  // На существующей таблице ENUM не обновляется через init.sql, поэтому
+  // правим его явно: сначала расширяем ENUM (оба значения), переносим данные,
+  // затем убираем устаревшее «Клейм».
+  const [[col]] = await conn.query(
+    `SELECT COLUMN_TYPE AS type FROM INFORMATION_SCHEMA.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'loads' AND COLUMN_NAME = 'status'`
+  );
+
+  if (col && col.type && col.type.includes('Клейм')) {
+    console.log('🔧 Миграция: статус «Клейм» → «Спор»...');
+    // Шаг 1: ENUM с обоими значениями — безопасно, без потери данных
+    await conn.query(
+      `ALTER TABLE loads MODIFY status
+         ENUM('Новый','Назначен','Забран','Доставлен','В ожидании','Оплачен','Запрошен','Клейм','Спор','Архив','Удалён','delayed')
+         NOT NULL DEFAULT 'Новый'`
+    );
+    // Шаг 2: перенос существующих заказов
+    await conn.query(`UPDATE loads SET status = 'Спор' WHERE status = 'Клейм'`);
+    // Шаг 3: убираем устаревшее значение из ENUM
+    await conn.query(
+      `ALTER TABLE loads MODIFY status
+         ENUM('Новый','Назначен','Забран','Доставлен','В ожидании','Оплачен','Запрошен','Спор','Архив','Удалён','delayed')
+         NOT NULL DEFAULT 'Новый'`
+    );
+    console.log('✅ Миграция статуса завершена');
   }
 }
 
