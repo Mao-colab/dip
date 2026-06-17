@@ -9,7 +9,7 @@
  */
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadsApi, autoassignApi, podApi } from '../services/api';
+import { loadsApi, autoassignApi, podApi, ratesApi } from '../services/api';
 import { IconOrders, IconTrash, IconEdit, IconDocument } from '../icons';
 import { useCurrency } from '../hooks/useCurrency';
 import { estimateDistanceKm } from '../services/distance';
@@ -26,6 +26,15 @@ const STATUS_COLORS = {
   'Оплачен':  '#059669', 'Спор':    '#dc2626', 'Архив':     '#9ca3af', 'Удалён':'#6b7280',
 };
 const PAY_TYPES = ['Наличные','Безналичный расчёт','Перевод','Карта'];
+const VEHICLE_TYPES = [
+  'Тентованный','Реф','Открытый','Контейнер',
+  'Автовоз','Изотерм','Мегатонник','Микроавтобус',
+];
+const URGENCY = [
+  { v: 'standard', l: 'Стандарт (×1.0)' },
+  { v: 'express',  l: 'Экспресс (×1.35)' },
+  { v: 'urgent',   l: 'Срочно (×1.70)' },
+];
 const C = { border:'#e5e7eb', bg:'#f8fafc', blue:'#2563eb', green:'#059669', red:'#dc2626' };
 
 // ── UI-атомы ──────────────────────────────────────────────────────────────────
@@ -220,10 +229,65 @@ export default function OrdersPanel({ user }) {
 
   const f = k => v => setForm(p => ({ ...p, [k]: v }));
 
-  // Брокер видит блок «Ставки» с автоматическим расчётом расстояния
+  // Брокер видит блок «Ставки» с калькулятором и автоматическим расчётом расстояния
   const isBroker = (user?.roleKey || user?.role) === 'broker';
   // Расстояние, введённое брокером вручную, не перезаписываем авто-расчётом
   const distanceTouched = useRef(false);
+
+  // Калькулятор ставки внутри формы заказа
+  const [calc,        setCalc]        = useState({ vehicle_type:'Тентованный', weight_t:'', urgency:'standard' });
+  const [calcResult,  setCalcResult]  = useState(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+  const [calcError,   setCalcError]   = useState('');
+
+  function resetCalc() {
+    setCalc({ vehicle_type:'Тентованный', weight_t:'', urgency:'standard' });
+    setCalcResult(null);
+    setCalcError('');
+  }
+
+  async function calcRate() {
+    if (!form.origin_city || !form.destination_city) {
+      setCalcError('Укажите города отправления и назначения');
+      return;
+    }
+    setCalcLoading(true);
+    setCalcError('');
+    try {
+      const data = await ratesApi.calculate({
+        origin_city:  form.origin_city,
+        dest_city:    form.destination_city,
+        distance_km:  parseFloat(form.distance_km) || undefined,
+        vehicle_type: calc.vehicle_type,
+        weight_t:     parseFloat(calc.weight_t) || 0,
+        urgency:      calc.urgency,
+      });
+      setCalcResult(data);
+      // если расстояние не было задано — подставляем рассчитанное бэкендом
+      if (!form.distance_km && data.distance_km) {
+        distanceTouched.current = true;
+        setForm(p => ({ ...p, distance_km: data.distance_km }));
+      }
+    } catch (e) {
+      setCalcError(e.message || 'Ошибка расчёта');
+    } finally {
+      setCalcLoading(false);
+    }
+  }
+
+  function addCalcToRates() {
+    if (!calcResult) return;
+    const perKm = calcResult.breakdown?.rate_per_km;
+    const note  = [`Расчёт: ${calcResult.vehicle_type}`, perKm ? `${perKm} Br/км` : null]
+      .filter(Boolean).join(', ');
+    setForm(p => ({
+      ...p,
+      rates: [
+        ...p.rates.filter(r => r.carrier || r.amount),
+        { carrier:'Расчёт системы', amount:String(calcResult.rate), note },
+      ],
+    }));
+  }
 
   // ── FR: авто-подстановка расстояния по городам отправления/назначения ───────
   useEffect(() => {
@@ -373,6 +437,7 @@ export default function OrdersPanel({ user }) {
   function openEdit(order) {
     setForm({ ...BLANK, ...order, rates: order.rates?.length ? order.rates : BLANK.rates });
     distanceTouched.current = true; // не перезаписываем сохранённое расстояние
+    resetCalc();
     setEditId(order.id);
     setShowAdd(true);
   }
@@ -508,7 +573,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
             <Btn onClick={exportCSV}>
               <IconDocument size={14}/> CSV
             </Btn>
-            <Btn variant="primary" onClick={()=>{ setForm(BLANK); distanceTouched.current = false; setEditId(null); setShowAdd(true); }}>
+            <Btn variant="primary" onClick={()=>{ setForm(BLANK); distanceTouched.current = false; resetCalc(); setEditId(null); setShowAdd(true); }}>
               + Добавить заказ
             </Btn>
           </div>
@@ -800,6 +865,41 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                   type="number"
                   placeholder="Авто по городам отправления и назначения"
                 />
+              </div>
+
+              {/* Калькулятор ставки */}
+              <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#d97706', textTransform:'uppercase', letterSpacing:.4, marginBottom:8 }}>
+                  Калькулятор ставки
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                  <Field label="Тип ТС"     value={calc.vehicle_type} onChange={v=>setCalc(p=>({...p,vehicle_type:v}))} options={VEHICLE_TYPES}/>
+                  <Field label="Вес (тонн)" value={calc.weight_t}     onChange={v=>setCalc(p=>({...p,weight_t:v}))}     type="number" placeholder="0"/>
+                  <Field label="Срочность"  value={calc.urgency}      onChange={v=>setCalc(p=>({...p,urgency:v}))}      options={URGENCY}/>
+                </div>
+                <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                  <Btn variant="amber" small onClick={calcRate} disabled={calcLoading}>
+                    {calcLoading ? 'Считаем...' : 'Рассчитать ставку'}
+                  </Btn>
+                  {calcResult && (
+                    <>
+                      <span style={{ fontSize:16, fontWeight:800, color:'#d97706' }}>{formatAmount(calcResult.rate)}</span>
+                      {calcResult.breakdown?.rate_per_km != null && (
+                        <span style={{ fontSize:12, color:'#9ca3af' }}>
+                          {calcResult.breakdown.rate_per_km} {currencySymbol}/км · {calcResult.distance_km} км
+                        </span>
+                      )}
+                      <Btn small onClick={addCalcToRates}>+ В ставки</Btn>
+                    </>
+                  )}
+                </div>
+                {calcResult?.market && (
+                  <div style={{ fontSize:11, color:'#6b7280', marginTop:6 }}>
+                    Рынок (90 дн.): {formatAmount(calcResult.market.min_rate)} – {formatAmount(calcResult.market.max_rate)},
+                    средняя {formatAmount(calcResult.market.avg_rate)} ({calcResult.market.samples})
+                  </div>
+                )}
+                {calcError && <div style={{ color:C.red, fontSize:12, marginTop:6 }}>{calcError}</div>}
               </div>
 
               {form.rates.map((r, i) => {
