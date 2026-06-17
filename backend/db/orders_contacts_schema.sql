@@ -6,7 +6,7 @@
 -- Заказы (Loads)
 CREATE TABLE IF NOT EXISTS loads (
   id                    INT AUTO_INCREMENT PRIMARY KEY,
-  status                ENUM('Новый','Назначен','Забран','Доставлен','В ожидании','Оплачен','Запрошен','Клейм','Архив','Удалён')
+  status                ENUM('Новый','Назначен','Забран','Доставлен','В ожидании','Оплачен','Запрошен','Спор','Архив','Удалён')
                         NOT NULL DEFAULT 'Новый',
   cod_amount            DECIMAL(10,2) NOT NULL DEFAULT 0,
   driver_pay            DECIMAL(10,2) NOT NULL DEFAULT 0,

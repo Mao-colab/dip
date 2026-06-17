@@ -45,8 +45,8 @@ export default function IncidentModal({ loadId, onClose, onCreated }) {
   }
 
   const TYPE_ICONS = {
-    breakdown: '🔧', accident: '🚨', delay: '⏱️',
-    customs: '🛃', cargo_damage: '📦', other: '⚠️',
+    breakdown: '', accident: '', delay: '',
+    customs: '', cargo_damage: '', other: '⚠',
   };
 
   return (
@@ -57,7 +57,7 @@ export default function IncidentModal({ loadId, onClose, onCreated }) {
 
         <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
           <h3 style={{ margin:0, fontSize:16, fontWeight:800, color:'#111827' }}>
-            ⚠️ Сообщить об инциденте
+            ⚠ Сообщить об инциденте
           </h3>
           <button onClick={onClose} style={{ background:'#f3f4f6', border:'none', borderRadius:'50%', width:32, height:32, cursor:'pointer', fontSize:16 }}>×</button>
         </div>
@@ -114,7 +114,7 @@ export default function IncidentModal({ loadId, onClose, onCreated }) {
           <button onClick={submit} disabled={saving}
             style={{ flex:1, padding:'10px 0', background:'#dc2626', color:'#fff',
                      border:'none', borderRadius:10, fontSize:14, fontWeight:700, cursor: saving ? 'default' : 'pointer', opacity: saving ? .7 : 1 }}>
-            {saving ? 'Отправка...' : '🚨 Сообщить об инциденте'}
+            {saving ? 'Отправка...' : 'Сообщить об инциденте'}
           </button>
           <button onClick={onClose}
             style={{ padding:'10px 18px', background:'#f9fafb', border:'1px solid #e5e7eb', borderRadius:10,

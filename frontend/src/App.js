@@ -12,7 +12,7 @@ class ErrorBoundary extends Component {
     if (this.state.error) {
       return (
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', flexDirection:'column', gap:12, color:'#6b7280', padding:40 }}>
-          <div style={{ fontSize:32 }}>🗺️</div>
+          <div style={{ fontSize:32 }}></div>
           <div style={{ fontSize:15, fontWeight:600, color:'#374151' }}>Карта временно недоступна</div>
           <button onClick={() => this.setState({ error: null })}
             style={{ padding:'8px 20px', borderRadius:8, background:'#2563eb', color:'#fff', border:'none', cursor:'pointer', fontWeight:600 }}>

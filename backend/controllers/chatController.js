@@ -1,7 +1,7 @@
 ﻿/**
  * MT — Chat Controller
  * FR-07: Встроенный мессенджер брокер ↔ перевозчик
- */ // ✅ ИСПРАВЛЕНО: закрыт блочный комментарий (был незакрыт — SyntaxError)
+ */ // ИСПРАВЛЕНО: закрыт блочный комментарий (был незакрыт — SyntaxError)
 
 const db = require('../db/connection');
 const { broadcastChatMessage } = require('../sockets/chatSocket');
@@ -9,7 +9,7 @@ const { broadcastChatMessage } = require('../sockets/chatSocket');
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/v1/chat/contacts
 // Список контактов + последнее сообщение (левая панель мессенджера)
-// ✅ ИСПРАВЛЕНО: подзапрос для корректного получения последнего сообщения
+// ИСПРАВЛЕНО: подзапрос для корректного получения последнего сообщения
 // ─────────────────────────────────────────────────────────────────────────────
 exports.getContacts = async (req, res) => {
   const userId = req.user.id;
@@ -28,7 +28,7 @@ exports.getContacts = async (req, res) => {
          COUNT(unread.id)     AS unread_count
        FROM users u
        JOIN (
-         -- ✅ Подзапрос: берём только последнее сообщение на пару (userId, u.id)
+         -- Подзапрос: берём только последнее сообщение на пару (userId, u.id)
          SELECT m.*
          FROM messages m
          WHERE m.id = (
@@ -169,7 +169,7 @@ exports.sendMessage = async (req, res) => {
       senderName: req.user.name,
     };
 
-    // ✅ ИСПРАВЛЕНО: сигнатура совпадает с chatSocket.broadcastChatMessage(receiverId, message)
+    // ИСПРАВЛЕНО: сигнатура совпадает с chatSocket.broadcastChatMessage(receiverId, message)
     broadcastChatMessage(receiverId, newMessage);
 
     return res.status(201).json(newMessage);

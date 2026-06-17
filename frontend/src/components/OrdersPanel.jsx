@@ -7,24 +7,34 @@
  *
  * Данные: backend API (/api/v1/loads) → fallback localStorage
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { loadsApi, autoassignApi, podApi } from '../services/api';
+import { loadsApi, autoassignApi, podApi, ratesApi } from '../services/api';
 import { IconOrders, IconTrash, IconEdit, IconDocument } from '../icons';
 import { useCurrency } from '../hooks/useCurrency';
+import { estimateDistanceKm } from '../services/distance';
 import ReviewModal   from './ReviewModal';
 import IncidentModal from './IncidentModal';
 
 const STATUS_TABS = [
   'Новый','Назначен','Забран','Доставлен',
-  'Запрошен','В ожидании','Оплачен','Клейм','Архив','Удалён',
+  'Запрошен','В ожидании','Оплачен','Спор','Архив','Удалён',
 ];
 const STATUS_COLORS = {
   'Новый':    '#7c3aed', 'Назначен': '#2563eb', 'Забран':    '#d97706',
   'Доставлен':'#16a34a', 'Запрошен': '#0891b2', 'В ожидании':'#f59e0b',
-  'Оплачен':  '#059669', 'Клейм':    '#dc2626', 'Архив':     '#9ca3af', 'Удалён':'#6b7280',
+  'Оплачен':  '#059669', 'Спор':    '#dc2626', 'Архив':     '#9ca3af', 'Удалён':'#6b7280',
 };
 const PAY_TYPES = ['Наличные','Безналичный расчёт','Перевод','Карта'];
+const VEHICLE_TYPES = [
+  'Тентованный','Реф','Открытый','Контейнер',
+  'Автовоз','Изотерм','Мегатонник','Микроавтобус',
+];
+const URGENCY = [
+  { v: 'standard', l: 'Стандарт (×1.0)' },
+  { v: 'express',  l: 'Экспресс (×1.35)' },
+  { v: 'urgent',   l: 'Срочно (×1.70)' },
+];
 const C = { border:'#e5e7eb', bg:'#f8fafc', blue:'#2563eb', green:'#059669', red:'#dc2626' };
 
 // ── UI-атомы ──────────────────────────────────────────────────────────────────
@@ -91,6 +101,8 @@ const BLANK = {
   destination_addr:'', destination_city:'', destination_date:'', destination_contact:'', destination_phone:'',
   shipper_name:'', shipper_phone:'',
   vehicles:[{ make:'', year:'', type:'', vin:'', price:'' }],
+  distance_km:'',
+  rates:[{ carrier:'', amount:'', note:'' }],
   notes:'',
 };
 
@@ -157,8 +169,8 @@ function AutoAssignModal({ loadId, onClose, onAssigned }) {
               <div style={{ flex:1 }}>
                 <div style={{ fontWeight:700, fontSize:14, color:'#111827' }}>{d.name}</div>
                 <div style={{ fontSize:12, color:'#6b7280', display:'flex', gap:12, marginTop:2 }}>
-                  {d.distance != null && <span>📍 {d.distance} км</span>}
-                  {d.rating > 0 && <span>⭐ {d.rating}</span>}
+                  {d.distance != null && <span>{d.distance} км</span>}
+                  {d.rating > 0 && <span>{d.rating}</span>}
                   <span style={{ color:d.status==='active'?C.green:'#9ca3af' }}>
                     ● {d.status==='active'?'Активен':'Свободен'}
                   </span>
@@ -180,7 +192,7 @@ function AutoAssignModal({ loadId, onClose, onAssigned }) {
       <div style={{ display:'flex', gap:10, borderTop:`1px solid ${C.border}`, paddingTop:14 }}>
         {suggestions.length > 0 && (
           <Btn variant="amber" onClick={autoAssign} disabled={assigning}>
-            ⚡ Авто-назначить лучшего
+            Авто-назначить лучшего
           </Btn>
         )}
         <Btn onClick={onClose}>Позже</Btn>
@@ -216,6 +228,75 @@ export default function OrdersPanel({ user }) {
   const [podLoadId,     setPodLoadId]     = useState(null);
 
   const f = k => v => setForm(p => ({ ...p, [k]: v }));
+
+  // Брокер видит блок «Ставки» с калькулятором и автоматическим расчётом расстояния
+  const isBroker = (user?.roleKey || user?.role) === 'broker';
+  // Расстояние, введённое брокером вручную, не перезаписываем авто-расчётом
+  const distanceTouched = useRef(false);
+
+  // Калькулятор ставки внутри формы заказа
+  const [calc,        setCalc]        = useState({ vehicle_type:'Тентованный', weight_t:'', urgency:'standard' });
+  const [calcResult,  setCalcResult]  = useState(null);
+  const [calcLoading, setCalcLoading] = useState(false);
+  const [calcError,   setCalcError]   = useState('');
+
+  function resetCalc() {
+    setCalc({ vehicle_type:'Тентованный', weight_t:'', urgency:'standard' });
+    setCalcResult(null);
+    setCalcError('');
+  }
+
+  async function calcRate() {
+    if (!form.origin_city || !form.destination_city) {
+      setCalcError('Укажите города отправления и назначения');
+      return;
+    }
+    setCalcLoading(true);
+    setCalcError('');
+    try {
+      const data = await ratesApi.calculate({
+        origin_city:  form.origin_city,
+        dest_city:    form.destination_city,
+        distance_km:  parseFloat(form.distance_km) || undefined,
+        vehicle_type: calc.vehicle_type,
+        weight_t:     parseFloat(calc.weight_t) || 0,
+        urgency:      calc.urgency,
+      });
+      setCalcResult(data);
+      // если расстояние не было задано — подставляем рассчитанное бэкендом
+      if (!form.distance_km && data.distance_km) {
+        distanceTouched.current = true;
+        setForm(p => ({ ...p, distance_km: data.distance_km }));
+      }
+    } catch (e) {
+      setCalcError(e.message || 'Ошибка расчёта');
+    } finally {
+      setCalcLoading(false);
+    }
+  }
+
+  function addCalcToRates() {
+    if (!calcResult) return;
+    const perKm = calcResult.breakdown?.rate_per_km;
+    const note  = [`Расчёт: ${calcResult.vehicle_type}`, perKm ? `${perKm} Br/км` : null]
+      .filter(Boolean).join(', ');
+    setForm(p => ({
+      ...p,
+      rates: [
+        ...p.rates.filter(r => r.carrier || r.amount),
+        { carrier:'Расчёт системы', amount:String(calcResult.rate), note },
+      ],
+    }));
+  }
+
+  // ── FR: авто-подстановка расстояния по городам отправления/назначения ───────
+  useEffect(() => {
+    if (!isBroker || distanceTouched.current) return;
+    const est = estimateDistanceKm(form.origin_city, form.destination_city);
+    if (est != null) {
+      setForm(p => (String(p.distance_km) === String(est) ? p : { ...p, distance_km: est }));
+    }
+  }, [isBroker, form.origin_city, form.destination_city]);
 
   // ── Загрузка заказов с бэкенда ─────────────────────────────────────────────
   const loadOrders = useCallback(async () => {
@@ -265,6 +346,8 @@ export default function OrdersPanel({ user }) {
       driver_id:     l.driver_id,
       createdAt:     l.created_at ? new Date(l.created_at).toLocaleDateString('ru-RU') : '',
       vehicles:      l.vehicles || [],
+      distance_km:   l.distance_km || '',
+      rates:         l.rates || [],
     };
   }
 
@@ -289,6 +372,8 @@ export default function OrdersPanel({ user }) {
         cod_amount:    parseFloat(form.cod_amount) || 0,
         driver_pay:    parseFloat(form.driverPay)  || 0,
         vehicles:      form.vehicles.filter(v => v.make || v.vin),
+        distance_km:   parseFloat(form.distance_km) || null,
+        rates:         (form.rates || []).filter(r => r.carrier || r.amount),
       };
 
       if (editId) {
@@ -309,9 +394,9 @@ export default function OrdersPanel({ user }) {
         } else {
           const res = await loadsApi.create(payload);
           await loadOrders();
-          // Запускаем авто-назначение для диспетчеров и администраторов
+          // Запускаем авто-подбор водителя для брокеров, диспетчеров и администраторов
           const role = user?.role || user?.roleKey;
-          if (res?.id && ['dispatcher', 'admin'].includes(role)) {
+          if (res?.id && ['broker', 'dispatcher', 'admin'].includes(role)) {
             setAutoAssignLoadId(res.id);
           }
         }
@@ -350,7 +435,9 @@ export default function OrdersPanel({ user }) {
   }
 
   function openEdit(order) {
-    setForm({ ...BLANK, ...order });
+    setForm({ ...BLANK, ...order, rates: order.rates?.length ? order.rates : BLANK.rates });
+    distanceTouched.current = true; // не перезаписываем сохранённое расстояние
+    resetCalc();
     setEditId(order.id);
     setShowAdd(true);
   }
@@ -486,7 +573,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
             <Btn onClick={exportCSV}>
               <IconDocument size={14}/> CSV
             </Btn>
-            <Btn variant="primary" onClick={()=>{ setForm(BLANK); setEditId(null); setShowAdd(true); }}>
+            <Btn variant="primary" onClick={()=>{ setForm(BLANK); distanceTouched.current = false; resetCalc(); setEditId(null); setShowAdd(true); }}>
               + Добавить заказ
             </Btn>
           </div>
@@ -598,7 +685,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <a href={`tel:${o.shipper_phone}`}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#f0fdf4', border:'1px solid #bbf7d0', color:'#16a34a', fontSize:12, fontWeight:600, textDecoration:'none' }}>
-                            📞 Позвонить грузоотправителю
+                            Позвонить грузоотправителю
                           </a>
                         )}
                         {/* FR-12: Авто-назначение водителя — для заказов без назначенного водителя */}
@@ -613,7 +700,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <button onClick={() => navigate('/messages')}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#eff6ff', border:'1px solid #bfdbfe', color:'#2563eb', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                            💬 Написать водителю
+                            Написать водителю
                           </button>
                         )}
                         {/* FR-25: Подтвердить доставку */}
@@ -621,7 +708,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <button onClick={() => confirmPod(o.id)}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#f0fdf4', border:'1px solid #86efac', color:'#16a34a', fontSize:12, fontWeight:700, cursor:'pointer' }}>
-                            ✅ Подтвердить доставку
+                            Подтвердить доставку
                           </button>
                         )}
                         {/* FR-28: Сообщить об инциденте */}
@@ -629,7 +716,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <button onClick={() => setIncidentLoadId(o.id)}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#fff1f2', border:'1px solid #fecaca', color:'#dc2626', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                            ⚠️ Инцидент
+                            ⚠ Инцидент
                           </button>
                         )}
                         {/* FR-09: Оставить отзыв */}
@@ -637,7 +724,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           <button onClick={() => setReviewTarget({ loadId: o.id, userId: o.driver_id, userName: o.driver })}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
                                      background:'#fffbeb', border:'1px solid #fde68a', color:'#d97706', fontSize:12, fontWeight:600, cursor:'pointer' }}>
-                            ⭐ Оценить водителя
+                            Оценить водителя
                           </button>
                         )}
                       </div>
@@ -670,6 +757,28 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                                 {v.vin && ` · ${v.vin}`}
                               </span>
                             ))}
+                          </div>
+                        </div>
+                      )}
+                      {o.rates?.length > 0 && (
+                        <div style={{ marginTop:10 }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', marginBottom:4 }}>
+                            Ставки{o.distance_km ? ` · ${o.distance_km} км` : ''}
+                          </div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                            {o.rates.map((r,i) => {
+                              const dist = parseFloat(o.distance_km) || 0;
+                              const amt  = parseFloat(r.amount) || 0;
+                              const perKm = dist > 0 && amt > 0 ? (amt / dist).toFixed(2) : null;
+                              return (
+                                <div key={i} style={{ display:'flex', alignItems:'center', gap:10, fontSize:12, background:'#f9fafb', border:`1px solid ${C.border}`, borderRadius:8, padding:'6px 10px' }}>
+                                  <span style={{ fontWeight:600, color:'#374151' }}>{r.carrier || '—'}</span>
+                                  <span style={{ fontWeight:700, color:C.green }}>{r.amount ? `${convert(r.amount).toFixed(0)} ${currencySymbol}` : '—'}</span>
+                                  {perKm && <span style={{ color:'#9ca3af' }}>{perKm} {currencySymbol}/км</span>}
+                                  {r.note && <span style={{ color:'#6b7280' }}>· {r.note}</span>}
+                                </div>
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -743,6 +852,92 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
               + Добавить ТС
             </button>
           </div>
+
+          {/* Ставки (только для брокера) */}
+          {isBroker && (
+            <div style={{ marginTop:14 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:.5 }}>
+                  Ставки
+                </div>
+                <div style={{ fontSize:11, color:'#6b7280' }}>
+                  Расстояние подставляется автоматически по городам
+                </div>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:8, marginBottom:8 }}>
+                <Field
+                  label="Расстояние (км)"
+                  value={form.distance_km}
+                  onChange={val=>{ distanceTouched.current = true; setForm(p=>({...p, distance_km:val})); }}
+                  type="number"
+                  placeholder="Авто по городам отправления и назначения"
+                />
+              </div>
+
+              {/* Калькулятор ставки */}
+              <div style={{ background:'#fffbeb', border:'1px solid #fde68a', borderRadius:10, padding:'12px 14px', marginBottom:10 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#d97706', textTransform:'uppercase', letterSpacing:.4, marginBottom:8 }}>
+                  Калькулятор ставки
+                </div>
+                <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                  <Field label="Тип ТС"     value={calc.vehicle_type} onChange={v=>setCalc(p=>({...p,vehicle_type:v}))} options={VEHICLE_TYPES}/>
+                  <Field label="Вес (тонн)" value={calc.weight_t}     onChange={v=>setCalc(p=>({...p,weight_t:v}))}     type="number" placeholder="0"/>
+                  <Field label="Срочность"  value={calc.urgency}      onChange={v=>setCalc(p=>({...p,urgency:v}))}      options={URGENCY}/>
+                </div>
+                <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+                  <Btn variant="amber" small onClick={calcRate} disabled={calcLoading}>
+                    {calcLoading ? 'Считаем...' : 'Рассчитать ставку'}
+                  </Btn>
+                  {calcResult && (
+                    <>
+                      <span style={{ fontSize:16, fontWeight:800, color:'#d97706' }}>{formatAmount(calcResult.rate)}</span>
+                      {calcResult.breakdown?.rate_per_km != null && (
+                        <span style={{ fontSize:12, color:'#9ca3af' }}>
+                          {calcResult.breakdown.rate_per_km} {currencySymbol}/км · {calcResult.distance_km} км
+                        </span>
+                      )}
+                      <Btn small onClick={addCalcToRates}>+ В ставки</Btn>
+                    </>
+                  )}
+                </div>
+                {calcResult?.market && (
+                  <div style={{ fontSize:11, color:'#6b7280', marginTop:6 }}>
+                    Рынок (90 дн.): {formatAmount(calcResult.market.min_rate)} – {formatAmount(calcResult.market.max_rate)},
+                    средняя {formatAmount(calcResult.market.avg_rate)} ({calcResult.market.samples})
+                  </div>
+                )}
+                {calcError && <div style={{ color:C.red, fontSize:12, marginTop:6 }}>{calcError}</div>}
+              </div>
+
+              {form.rates.map((r, i) => {
+                const dist = parseFloat(form.distance_km) || 0;
+                const amt  = parseFloat(r.amount) || 0;
+                const perKm = dist > 0 && amt > 0 ? (amt / dist).toFixed(2) : null;
+                return (
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 2fr auto', gap:8, marginBottom:8, alignItems:'end' }}>
+                    <Field label="Перевозчик" value={r.carrier}
+                      onChange={val=>setForm(p=>({...p, rates:p.rates.map((x,j)=>j===i?{...x,carrier:val}:x)}))}
+                      placeholder="ООО «Перевозчик»"/>
+                    <Field label={`Ставка (${currencySymbol})`} value={r.amount} type="number"
+                      onChange={val=>setForm(p=>({...p, rates:p.rates.map((x,j)=>j===i?{...x,amount:val}:x)}))}
+                      placeholder="0"/>
+                    <Field label={`Комментарий${perKm?` · ${perKm} ${currencySymbol}/км`:''}`} value={r.note}
+                      onChange={val=>setForm(p=>({...p, rates:p.rates.map((x,j)=>j===i?{...x,note:val}:x)}))}
+                      placeholder="Условия, срок подачи..."/>
+                    {form.rates.length > 1 && (
+                      <button onClick={()=>setForm(p=>({...p, rates:p.rates.filter((_,j)=>j!==i)}))}
+                        style={{ background:'#fff1f2', border:'1px solid #fecaca', borderRadius:8, padding:'7px 10px', cursor:'pointer', color:C.red, marginBottom:12 }}>✕</button>
+                    )}
+                  </div>
+                );
+              })}
+              <button onClick={()=>setForm(p=>({...p, rates:[...p.rates,{carrier:'',amount:'',note:''}]}))}
+                style={{ background:'#f9fafb', border:`1px dashed ${C.border}`, borderRadius:8, padding:'7px 16px', cursor:'pointer', fontSize:13, color:'#6b7280', width:'100%' }}>
+                + Добавить ставку
+              </button>
+            </div>
+          )}
 
           {apiError && (
             <div style={{ background:'#fff1f2', border:'1px solid #fecaca', borderRadius:8, padding:'10px 14px', color:C.red, fontSize:13, marginTop:12 }}>

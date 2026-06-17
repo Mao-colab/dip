@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS users (
 -- ─── loads (Заказы / грузы) ────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS loads (
     id                   INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
-    status               ENUM('Новый','Назначен','Забран','Доставлен','В ожидании','Оплачен','Запрошен','Клейм','Архив','Удалён','delayed')
+    status               ENUM('Новый','Назначен','Забран','Доставлен','В ожидании','Оплачен','Запрошен','Спор','Архив','Удалён','delayed')
                          NOT NULL DEFAULT 'Новый',
 
     -- Параметры груза/ТС

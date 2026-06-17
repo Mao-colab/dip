@@ -13,7 +13,7 @@ const { bootstrapDatabase }  = require('./db/bootstrap');
 // (чтобы вход не падал с 500), но предупреждаем: в продакшене задайте свой.
 if (!process.env.JWT_SECRET) {
   process.env.JWT_SECRET = 'mt-broker-default-secret-change-me';
-  console.warn('⚠️ JWT_SECRET не задан — используется небезопасный дефолт. Задайте переменную JWT_SECRET в продакшене!');
+  console.warn('⚠ JWT_SECRET не задан — используется небезопасный дефолт. Задайте переменную JWT_SECRET в продакшене!');
 }
 
 const trackingRoutes      = require('./routes/trackingRoutes');

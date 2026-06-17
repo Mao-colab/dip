@@ -114,7 +114,7 @@ async function removeFromBlacklist(req, res) {
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/v1/contacts/catalog
 // Каталог диспетчеров / перевозчиков с пагинацией
-// ✅ ИСПРАВЛЕНО: фильтр по рейтингу вынесен в HAVING (нельзя использовать
+// ИСПРАВЛЕНО: фильтр по рейтингу вынесен в HAVING (нельзя использовать
 //    агрегатную функцию AVG в WHERE — только в HAVING)
 // ─────────────────────────────────────────────────────────────────────────────
 async function getCatalog(req, res) {
@@ -130,7 +130,7 @@ async function getCatalog(req, res) {
       params.push(specialization);
     }
 
-    // ✅ ИСПРАВЛЕНО: HAVING для агрегата — WHERE не поддерживает AVG()
+    // ИСПРАВЛЕНО: HAVING для агрегата — WHERE не поддерживает AVG()
     const having      = rating_min ? 'HAVING AVG(r.rating) >= ?' : '';
     const havingParam = rating_min ? [Number(rating_min)] : [];
 

@@ -28,7 +28,7 @@ function parseUrl() {
       database: u.pathname ? u.pathname.replace(/^\//, '') : undefined,
     };
   } catch {
-    console.warn('⚠️ Не удалось разобрать строку подключения к БД (MYSQL_URL/DATABASE_URL)');
+    console.warn('⚠ Не удалось разобрать строку подключения к БД (MYSQL_URL/DATABASE_URL)');
     return {};
   }
 }
@@ -64,11 +64,11 @@ pool.config_resolved = config;
 // Проверка соединения при старте
 pool.getConnection()
   .then((conn) => {
-    console.log(`✅ MySQL подключён успешно (${config.user}@${config.host}:${config.port}/${config.database})`);
+    console.log(`MySQL подключён успешно (${config.user}@${config.host}:${config.port}/${config.database})`);
     conn.release();
   })
   .catch((err) => {
-    console.warn('⚠️ MySQL недоступен при старте:', err.message);
+    console.warn('⚠ MySQL недоступен при старте:', err.message);
     console.warn('   Сервер продолжит работу — повторная попытка при первом запросе');
   });
 

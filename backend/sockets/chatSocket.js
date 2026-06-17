@@ -7,7 +7,7 @@
  * модульный io — аналогично trackingSocket.js.
  */
 
-let io; // ✅ ИСПРАВЛЕНО: модульный io — broadcastChatMessage не требует io-аргумента
+let io; // ИСПРАВЛЕНО: модульный io — broadcastChatMessage не требует io-аргумента
 
 /**
  * Инициализация чат-сокета.
@@ -15,7 +15,7 @@ let io; // ✅ ИСПРАВЛЕНО: модульный io — broadcastChatMess
  * @param {import('socket.io').Server} _io
  */
 function initChatSocket(_io) {
-  io = _io; // ✅ сохраняем для использования в broadcastChatMessage
+  io = _io; // сохраняем для использования в broadcastChatMessage
 
   io.on('connection', (socket) => {
     if (!socket.user) return; // guard — нет JWT, пропускаем
@@ -46,7 +46,7 @@ function initChatSocket(_io) {
  * @param {string|number} receiverId
  * @param {object} message
  */
-function broadcastChatMessage(receiverId, message) { // ✅ ИСПРАВЛЕНО: убран лишний параметр io
+function broadcastChatMessage(receiverId, message) { // ИСПРАВЛЕНО: убран лишний параметр io
   if (!io) {
     console.warn('[Chat WS] Socket.io не инициализирован');
     return;

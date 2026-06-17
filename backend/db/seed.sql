@@ -217,12 +217,12 @@ SELECT u.id, 3, 52.7000, 28.5000, 90.0, 310
 FROM users u WHERE u.email = 'driver3@mt.by';
 
 -- Итоговый отчёт
-SELECT CONCAT('✅ Пользователей: ', COUNT(*)) AS result FROM users
+SELECT CONCAT('Пользователей: ', COUNT(*)) AS result FROM users
 UNION ALL
-SELECT CONCAT('✅ Заказов: ', COUNT(*)) FROM loads
+SELECT CONCAT('Заказов: ', COUNT(*)) FROM loads
 UNION ALL
-SELECT CONCAT('✅ ТС водителей: ', COUNT(*)) FROM user_vehicles
+SELECT CONCAT('ТС водителей: ', COUNT(*)) FROM user_vehicles
 UNION ALL
-SELECT CONCAT('✅ Отзывов: ', COUNT(*)) FROM reviews
+SELECT CONCAT('Отзывов: ', COUNT(*)) FROM reviews
 UNION ALL
-SELECT CONCAT('✅ Сообщений: ', COUNT(*)) FROM messages;
+SELECT CONCAT('Сообщений: ', COUNT(*)) FROM messages;

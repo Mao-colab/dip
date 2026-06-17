@@ -34,17 +34,17 @@ const MAX_BACKOFF_MS = 120_000;
 
 class GpsServiceClass {
   constructor() {
-    this._interval    = null;   // ✅ ИСПРАВЛЕНО: setInterval вместо рекурсивного setTimeout
+    this._interval    = null;   // ИСПРАВЛЕНО: setInterval вместо рекурсивного setTimeout
     this._watchId     = null;   // navigator.geolocation.watchPosition id
     this._token       = null;
     this._loadId      = null;
     this._lastPos     = null;   // последняя полученная позиция
-    this._prevSentPos = null;   // ✅ ИСПРАВЛЕНО: явная инициализация
+    this._prevSentPos = null;   // ИСПРАВЛЕНО: явная инициализация
     this._isRunning   = false;
     this._failCount   = 0;
     this._maxFails    = 5;
     this._onError     = null;
-    this._backoffMs   = 0;      // ✅ НОВОЕ: текущая задержка backoff
+    this._backoffMs   = 0;      // НОВОЕ: текущая задержка backoff
   }
 
   /**
@@ -85,7 +85,7 @@ class GpsServiceClass {
       }
     );
 
-    // ✅ ИСПРАВЛЕНО: setInterval — равномерные интервалы без накопления задержки
+    // ИСПРАВЛЕНО: setInterval — равномерные интервалы без накопления задержки
     this._startInterval();
   }
 
@@ -95,7 +95,7 @@ class GpsServiceClass {
   stop() {
     if (!this._isRunning) return;
 
-    // ✅ ИСПРАВЛЕНО: сначала снимаем флаг — защита от пинга "в полёте"
+    // ИСПРАВЛЕНО: сначала снимаем флаг — защита от пинга "в полёте"
     this._isRunning = false;
 
     if (this._watchId !== null) {
@@ -154,7 +154,7 @@ class GpsServiceClass {
     this._lastPos = {
       lat:      pos.coords.latitude,
       lng:      pos.coords.longitude,
-      // ✅ ИСПРАВЛЕНО: м/с → км/ч (было mph)
+      // ИСПРАВЛЕНО: м/с → км/ч (было mph)
       speed:    pos.coords.speed != null
                   ? Math.round(pos.coords.speed * 3.6)
                   : 0,
@@ -177,7 +177,7 @@ class GpsServiceClass {
 
   /** Отправляет пинг на /api/v1/tracking/ping */
   async _sendPing() {
-    // ✅ ИСПРАВЛЕНО: проверяем флаг перед отправкой (защита от пинга после stop())
+    // ИСПРАВЛЕНО: проверяем флаг перед отправкой (защита от пинга после stop())
     if (!this._isRunning) return;
 
     if (!this._lastPos) {
@@ -194,7 +194,7 @@ class GpsServiceClass {
       }
     }
 
-    // ✅ НОВОЕ: если backoff активен — ждём перед отправкой
+    // НОВОЕ: если backoff активен — ждём перед отправкой
     if (this._backoffMs > 0) {
       console.log(`[GPS] Backoff ${this._backoffMs}мс перед повторной попыткой...`);
       await new Promise((r) => setTimeout(r, this._backoffMs));
@@ -233,7 +233,7 @@ class GpsServiceClass {
     } catch (err) {
       this._failCount++;
 
-      // ✅ НОВОЕ: экспоненциальный backoff (1с → 2с → 4с → ... → 120с)
+      // НОВОЕ: экспоненциальный backoff (1с → 2с → 4с → ... → 120с)
       this._backoffMs = Math.min(
         this._backoffMs === 0 ? 1_000 : this._backoffMs * 2,
         MAX_BACKOFF_MS
