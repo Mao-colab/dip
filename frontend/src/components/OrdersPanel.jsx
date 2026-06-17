@@ -7,11 +7,12 @@
  *
  * Данные: backend API (/api/v1/loads) → fallback localStorage
  */
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { loadsApi, autoassignApi, podApi } from '../services/api';
 import { IconOrders, IconTrash, IconEdit, IconDocument } from '../icons';
 import { useCurrency } from '../hooks/useCurrency';
+import { estimateDistanceKm } from '../services/distance';
 import ReviewModal   from './ReviewModal';
 import IncidentModal from './IncidentModal';
 
@@ -91,6 +92,8 @@ const BLANK = {
   destination_addr:'', destination_city:'', destination_date:'', destination_contact:'', destination_phone:'',
   shipper_name:'', shipper_phone:'',
   vehicles:[{ make:'', year:'', type:'', vin:'', price:'' }],
+  distance_km:'',
+  rates:[{ carrier:'', amount:'', note:'' }],
   notes:'',
 };
 
@@ -217,6 +220,20 @@ export default function OrdersPanel({ user }) {
 
   const f = k => v => setForm(p => ({ ...p, [k]: v }));
 
+  // Брокер видит блок «Ставки» с автоматическим расчётом расстояния
+  const isBroker = (user?.roleKey || user?.role) === 'broker';
+  // Расстояние, введённое брокером вручную, не перезаписываем авто-расчётом
+  const distanceTouched = useRef(false);
+
+  // ── FR: авто-подстановка расстояния по городам отправления/назначения ───────
+  useEffect(() => {
+    if (!isBroker || distanceTouched.current) return;
+    const est = estimateDistanceKm(form.origin_city, form.destination_city);
+    if (est != null) {
+      setForm(p => (String(p.distance_km) === String(est) ? p : { ...p, distance_km: est }));
+    }
+  }, [isBroker, form.origin_city, form.destination_city]);
+
   // ── Загрузка заказов с бэкенда ─────────────────────────────────────────────
   const loadOrders = useCallback(async () => {
     setLoading(true);
@@ -265,6 +282,8 @@ export default function OrdersPanel({ user }) {
       driver_id:     l.driver_id,
       createdAt:     l.created_at ? new Date(l.created_at).toLocaleDateString('ru-RU') : '',
       vehicles:      l.vehicles || [],
+      distance_km:   l.distance_km || '',
+      rates:         l.rates || [],
     };
   }
 
@@ -289,6 +308,8 @@ export default function OrdersPanel({ user }) {
         cod_amount:    parseFloat(form.cod_amount) || 0,
         driver_pay:    parseFloat(form.driverPay)  || 0,
         vehicles:      form.vehicles.filter(v => v.make || v.vin),
+        distance_km:   parseFloat(form.distance_km) || null,
+        rates:         (form.rates || []).filter(r => r.carrier || r.amount),
       };
 
       if (editId) {
@@ -350,7 +371,8 @@ export default function OrdersPanel({ user }) {
   }
 
   function openEdit(order) {
-    setForm({ ...BLANK, ...order });
+    setForm({ ...BLANK, ...order, rates: order.rates?.length ? order.rates : BLANK.rates });
+    distanceTouched.current = true; // не перезаписываем сохранённое расстояние
     setEditId(order.id);
     setShowAdd(true);
   }
@@ -486,7 +508,7 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
             <Btn onClick={exportCSV}>
               <IconDocument size={14}/> CSV
             </Btn>
-            <Btn variant="primary" onClick={()=>{ setForm(BLANK); setEditId(null); setShowAdd(true); }}>
+            <Btn variant="primary" onClick={()=>{ setForm(BLANK); distanceTouched.current = false; setEditId(null); setShowAdd(true); }}>
               + Добавить заказ
             </Btn>
           </div>
@@ -665,6 +687,28 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                           </div>
                         </div>
                       )}
+                      {o.rates?.length > 0 && (
+                        <div style={{ marginTop:10 }}>
+                          <div style={{ fontSize:10, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', marginBottom:4 }}>
+                            Ставки{o.distance_km ? ` · ${o.distance_km} км` : ''}
+                          </div>
+                          <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+                            {o.rates.map((r,i) => {
+                              const dist = parseFloat(o.distance_km) || 0;
+                              const amt  = parseFloat(r.amount) || 0;
+                              const perKm = dist > 0 && amt > 0 ? (amt / dist).toFixed(2) : null;
+                              return (
+                                <div key={i} style={{ display:'flex', alignItems:'center', gap:10, fontSize:12, background:'#f9fafb', border:`1px solid ${C.border}`, borderRadius:8, padding:'6px 10px' }}>
+                                  <span style={{ fontWeight:600, color:'#374151' }}>{r.carrier || '—'}</span>
+                                  <span style={{ fontWeight:700, color:C.green }}>{r.amount ? `${convert(r.amount).toFixed(0)} ${currencySymbol}` : '—'}</span>
+                                  {perKm && <span style={{ color:'#9ca3af' }}>{perKm} {currencySymbol}/км</span>}
+                                  {r.note && <span style={{ color:'#6b7280' }}>· {r.note}</span>}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                       {/* Смена статусов */}
                       <div style={{ marginTop:12, display:'flex', gap:8, flexWrap:'wrap' }}>
                         {STATUS_TABS.filter(s => s !== o.status && !['Архив','Удалён'].includes(s)).map(s => (
@@ -735,6 +779,57 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
               + Добавить ТС
             </button>
           </div>
+
+          {/* Ставки (только для брокера) */}
+          {isBroker && (
+            <div style={{ marginTop:14 }}>
+              <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:8 }}>
+                <div style={{ fontSize:11, fontWeight:700, color:'#9ca3af', textTransform:'uppercase', letterSpacing:.5 }}>
+                  Ставки
+                </div>
+                <div style={{ fontSize:11, color:'#6b7280' }}>
+                  Расстояние подставляется автоматически по городам
+                </div>
+              </div>
+
+              <div style={{ display:'grid', gridTemplateColumns:'1fr', gap:8, marginBottom:8 }}>
+                <Field
+                  label="Расстояние (км)"
+                  value={form.distance_km}
+                  onChange={val=>{ distanceTouched.current = true; setForm(p=>({...p, distance_km:val})); }}
+                  type="number"
+                  placeholder="Авто по городам отправления и назначения"
+                />
+              </div>
+
+              {form.rates.map((r, i) => {
+                const dist = parseFloat(form.distance_km) || 0;
+                const amt  = parseFloat(r.amount) || 0;
+                const perKm = dist > 0 && amt > 0 ? (amt / dist).toFixed(2) : null;
+                return (
+                  <div key={i} style={{ display:'grid', gridTemplateColumns:'2fr 1fr 2fr auto', gap:8, marginBottom:8, alignItems:'end' }}>
+                    <Field label="Перевозчик" value={r.carrier}
+                      onChange={val=>setForm(p=>({...p, rates:p.rates.map((x,j)=>j===i?{...x,carrier:val}:x)}))}
+                      placeholder="ООО «Перевозчик»"/>
+                    <Field label={`Ставка (${currencySymbol})`} value={r.amount} type="number"
+                      onChange={val=>setForm(p=>({...p, rates:p.rates.map((x,j)=>j===i?{...x,amount:val}:x)}))}
+                      placeholder="0"/>
+                    <Field label={`Комментарий${perKm?` · ${perKm} ${currencySymbol}/км`:''}`} value={r.note}
+                      onChange={val=>setForm(p=>({...p, rates:p.rates.map((x,j)=>j===i?{...x,note:val}:x)}))}
+                      placeholder="Условия, срок подачи..."/>
+                    {form.rates.length > 1 && (
+                      <button onClick={()=>setForm(p=>({...p, rates:p.rates.filter((_,j)=>j!==i)}))}
+                        style={{ background:'#fff1f2', border:'1px solid #fecaca', borderRadius:8, padding:'7px 10px', cursor:'pointer', color:C.red, marginBottom:12 }}>✕</button>
+                    )}
+                  </div>
+                );
+              })}
+              <button onClick={()=>setForm(p=>({...p, rates:[...p.rates,{carrier:'',amount:'',note:''}]}))}
+                style={{ background:'#f9fafb', border:`1px dashed ${C.border}`, borderRadius:8, padding:'7px 16px', cursor:'pointer', fontSize:13, color:'#6b7280', width:'100%' }}>
+                + Добавить ставку
+              </button>
+            </div>
+          )}
 
           {apiError && (
             <div style={{ background:'#fff1f2', border:'1px solid #fecaca', borderRadius:8, padding:'10px 14px', color:C.red, fontSize:13, marginTop:12 }}>
