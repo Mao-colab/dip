@@ -601,6 +601,14 @@ td:first-child{color:#888;width:180px;font-size:12px}td:last-child{font-weight:6
                             📞 Позвонить грузоотправителю
                           </a>
                         )}
+                        {/* FR-12: Авто-назначение водителя — для заказов без назначенного водителя */}
+                        {!o.driver_id && (
+                          <button onClick={() => setAutoAssignLoadId(o.id)}
+                            style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
+                                     background:'#fffbeb', border:'1px solid #fcd34d', color:'#d97706', fontSize:12, fontWeight:700, cursor:'pointer' }}>
+                            🤖 Автоназначить водителя
+                          </button>
+                        )}
                         {o.driver_id && (
                           <button onClick={() => navigate('/messages')}
                             style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', borderRadius:8,
