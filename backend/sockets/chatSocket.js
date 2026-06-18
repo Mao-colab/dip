@@ -54,4 +54,14 @@ function broadcastChatMessage(receiverId, message) { // ИСПРАВЛЕНО: у
   io.to(`user:${String(receiverId)}`).emit('chat:message', message);
 }
 
-module.exports = { initChatSocket, broadcastChatMessage };
+/**
+ * Пушит уведомление (колокольчик) пользователю в реальном времени.
+ * @param {string|number} userId
+ * @param {object} notification — { id, type, title, message, is_read, created_at }
+ */
+function broadcastNotification(userId, notification) {
+  if (!io) return;
+  io.to(`user:${String(userId)}`).emit('notification:new', notification);
+}
+
+module.exports = { initChatSocket, broadcastChatMessage, broadcastNotification };

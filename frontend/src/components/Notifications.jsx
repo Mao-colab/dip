@@ -1,12 +1,18 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { notificationsApi } from '../services/api';
 import { IconBell, IconCheck, IconTrash } from '../icons';
+
+// Сокет подключаем так же, как трекинг/чат: пустой URL → текущий origin (в dev проксируется на :4000)
+const SOCKET_URL = process.env.REACT_APP_SOCKET_URL || '';
 
 const TYPE_COLORS = {
   claim_new:      '#dc2626',
   claim_resolved: '#059669',
   doc_verified:   '#2563eb',
   order_assigned: '#d97706',
+  load_assigned:  '#d97706',
+  load_offer:     '#0891b2',
   order_status:   '#7c3aed',
   info:           '#6b7280',
 };
@@ -41,6 +47,23 @@ export default function NotificationsPanel() {
     timerRef.current = setInterval(fetchNotifications, 30000);
     return () => clearInterval(timerRef.current);
   }, [fetchNotifications]);
+
+  // Реал-тайм приём уведомлений по WebSocket (без перезагрузки)
+  useEffect(() => {
+    const token = localStorage.getItem('mt_token');
+    if (!token) return;
+    const socket = io(SOCKET_URL || undefined, {
+      auth: { token },
+      transports: ['websocket'],
+      reconnectionAttempts: 5,
+      reconnectionDelay: 2000,
+    });
+    socket.on('notification:new', (n) => {
+      setItems(prev => prev.some(x => x.id === n.id) ? prev : [n, ...prev]);
+      if (!n.is_read) setUnread(prev => prev + 1);
+    });
+    return () => socket.disconnect();
+  }, []);
 
   // Закрытие по клику вне панели
   useEffect(() => {

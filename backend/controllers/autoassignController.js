@@ -48,11 +48,20 @@ async function pickDispatcher() {
 async function createNotification(userId, type, title, message, entityId = null) {
   if (!userId) return;
   try {
-    await db.execute(
+    const [result] = await db.execute(
       `INSERT INTO notifications (user_id, type, title, message, entity_type, entity_id)
        VALUES (?, ?, ?, ?, 'load', ?)`,
       [userId, type, title, message, entityId]
     );
+    // Реал-тайм пуш в колокольчик (без перезагрузки страницы)
+    try {
+      const { broadcastNotification } = require('../sockets/chatSocket');
+      broadcastNotification(userId, {
+        id: result.insertId, type, title, message,
+        entity_type: 'load', entity_id: entityId,
+        is_read: 0, created_at: new Date().toISOString(),
+      });
+    } catch {}
   } catch (e) {
     console.warn('[AutoAssign] createNotification:', e.message);
   }
