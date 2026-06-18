@@ -129,7 +129,7 @@ function tick() {
  */
 function startTrackingSimulator() {
   if (String(process.env.TRACKING_SIM).toLowerCase() === 'off') {
-    console.log('ℹ️  Симулятор трекинга отключён (TRACKING_SIM=off)');
+    console.log('Симулятор трекинга отключён (TRACKING_SIM=off)');
     return;
   }
   if (timer) return; // защита от повторного запуска
@@ -137,7 +137,7 @@ function startTrackingSimulator() {
   TRIPS.forEach(prepare);
   timer = setInterval(tick, TICK_MS);
   if (typeof timer.unref === 'function') timer.unref(); // не держим event loop
-  console.log(`🚚 Симулятор трекинга запущен: ${TRIPS.length} водителя движутся по маршрутам (тик ${TICK_MS} мс)`);
+  console.log(`Симулятор трекинга запущен: ${TRIPS.length} водителя движутся по маршрутам (тик ${TICK_MS} мс)`);
 }
 
 function stopTrackingSimulator() {
