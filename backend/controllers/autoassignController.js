@@ -42,6 +42,40 @@ async function pickDispatcher() {
   return rows[0] || null;
 }
 
+/**
+ * Создаёт запись-уведомление (колокольчик). Переживает оффлайн водителя.
+ */
+async function createNotification(userId, type, title, message, entityId = null) {
+  if (!userId) return;
+  try {
+    await db.execute(
+      `INSERT INTO notifications (user_id, type, title, message, entity_type, entity_id)
+       VALUES (?, ?, ?, ?, 'load', ?)`,
+      [userId, type, title, message, entityId]
+    );
+  } catch (e) {
+    console.warn('[AutoAssign] createNotification:', e.message);
+  }
+}
+
+/**
+ * Отправляет водителю сообщение в чат (сохраняется в БД) и пушит его по WebSocket.
+ */
+async function sendDriverMessage(senderId, driverId, loadId, text) {
+  try {
+    await db.execute(
+      `INSERT INTO messages (sender_id, receiver_id, order_id, text, type, is_read, created_at)
+       VALUES (?, ?, ?, ?, 'system', 0, NOW(3))`,
+      [senderId, driverId, loadId, text]
+    );
+    const { broadcastChatMessage } = require('../sockets/chatSocket');
+    broadcastChatMessage(driverId, { senderId, receiverId: driverId, orderId: loadId, text, type: 'system' });
+  } catch (e) {
+    console.warn('[AutoAssign] sendDriverMessage:', e.message);
+  }
+}
+
+
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/v1/autoassign/suggest/:loadId
 // ─────────────────────────────────────────────────────────────────────────────
@@ -156,17 +190,11 @@ async function offerToDriver(req, res) {
       ? `Предложение по заказу #${loadId}: ${message}`
       : `Вам предложен заказ #${loadId}. Ожидаем подтверждения.`;
 
-    await db.execute(
-      `INSERT INTO messages (sender_id, receiver_id, order_id, text, type, is_read, created_at)
-       VALUES (?, ?, ?, ?, 'system', 0, NOW(3))`,
-      [senderId, driverId, loadId, text]
-    );
+    // Сообщение в чат (сохраняется + WebSocket-пуш)
+    await sendDriverMessage(senderId, driverId, loadId, text);
 
-    // Уведомление через WebSocket
-    try {
-      const { broadcastChatMessage } = require('../sockets/chatSocket');
-      broadcastChatMessage(driverId, { senderId, receiverId: driverId, orderId: loadId, text, type: 'system' });
-    } catch {}
+    // Уведомление в колокольчик (переживает оффлайн)
+    await createNotification(driverId, 'load_offer', `Предложение по заказу #${loadId}`, text, loadId);
 
     // Статус заказа → Запрошен
     await db.execute(
@@ -242,10 +270,18 @@ async function autoAssignDriver(req, res) {
       [loadId, best.id]
     );
 
-    // Уведомить водителя через WebSocket
+    const text = `Вам назначен заказ #${loadId}. Откройте раздел «Заказы» для деталей.`;
+
+    // Сообщение в чат (сохраняется + WebSocket-пуш)
+    await sendDriverMessage(assignedDispatcherId, best.id, loadId, text);
+
+    // Уведомление в колокольчик (переживает оффлайн)
+    await createNotification(best.id, 'load_assigned', `Назначен заказ #${loadId}`, text, loadId);
+
+    // Живой WebSocket-сигнал водителю (если онлайн)
     try {
       const { notifyDriver } = require('../sockets/trackingSocket');
-      notifyDriver(best.id, 'load:assigned', { loadId, message: 'Вам назначен новый заказ' });
+      notifyDriver(best.id, 'load:assigned', { loadId, message: text });
     } catch {}
 
     res.json({
